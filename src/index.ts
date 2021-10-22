@@ -17,20 +17,20 @@ const PORT = 5000;
 
 server.use(express.json());
 // server.use(cors({ origin: process.env.ORIGIN, credentials: true }));
-server.use(cors({ origin: '*', credentials: true }));
+// server.use(cors({ origin: '*', credentials: true }));
 server.use(express.urlencoded({ extended: true }));
 
-server.get('/toto', (req, res) => {
-    res.send({
-        toto: 'ezez',
-    });
-});
+// server.get('/toto', (req, res) => {
+//     res.send({
+//         toto: 'ezez',
+//     });
+// });
 
 if (ON_PRODUCTION) {
     server.use(express.static(path.join(__dirname, '..', 'client', 'public')));
-    server.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '..', 'client', 'public', 'index.html'));
-    });
+    // server.get('*', (req, res) => {
+    //     res.sendFile(path.join(__dirname, '..', 'client', 'public', 'index.html'));
+    // });
 }
 
 server.listen(PORT, () => {

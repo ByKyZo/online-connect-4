@@ -25,28 +25,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path = __importStar(require("path"));
-const cors_1 = __importDefault(require("cors"));
 dotenv_1.default.config({ path: path.join(__dirname, '..', 'config', '.env.local') });
 require("./database/database");
+// TODO Changer la db utilisé
+// TODO Changer la db utilisé
+// TODO Changer la db utilisé
 const ON_PRODUCTION = true;
 const server = express_1.default();
-// @ts-ignore
 // const PORT = process.env.PORT | 6000;
 const PORT = 5000;
 server.use(express_1.default.json());
 // server.use(cors({ origin: process.env.ORIGIN, credentials: true }));
-server.use(cors_1.default({ origin: '*', credentials: true }));
+// server.use(cors({ origin: '*', credentials: true }));
 server.use(express_1.default.urlencoded({ extended: true }));
-server.get('/toto', (req, res) => {
-    res.send({
-        toto: 'ezez',
-    });
-});
+// server.get('/toto', (req, res) => {
+//     res.send({
+//         toto: 'ezez',
+//     });
+// });
 if (ON_PRODUCTION) {
     server.use(express_1.default.static(path.join(__dirname, '..', 'client', 'public')));
-    server.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '..', 'client', 'public', 'index.html'));
-    });
+    // server.get('*', (req, res) => {
+    //     res.sendFile(path.join(__dirname, '..', 'client', 'public', 'index.html'));
+    // });
 }
 server.listen(PORT, () => {
     console.log(`listen on port ${PORT}`);
