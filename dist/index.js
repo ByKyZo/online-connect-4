@@ -45,9 +45,9 @@ server.use(express_1.default.urlencoded({ extended: true }));
 // });
 if (ON_PRODUCTION) {
     server.use(express_1.default.static(path.join(__dirname, '..', 'client', 'public')));
-    // server.get('*', (req, res) => {
-    //     res.sendFile(path.join(__dirname, '..', 'client', 'public', 'index.html'));
-    // });
+    server.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '..', 'client', 'public', 'index.html'));
+    });
 }
 server.listen(PORT, () => {
     console.log(`listen on port ${PORT}`);
