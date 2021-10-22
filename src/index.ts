@@ -5,10 +5,13 @@ import cors from 'cors';
 dotenv.config({ path: path.join(__dirname, '..', 'config', '.env.local') });
 import './database/database';
 
+// TODO Changer la db utilisé
+// TODO Changer la db utilisé
+// TODO Changer la db utilisé
+
 const ON_PRODUCTION = true;
 
 const server = express();
-// @ts-ignore
 // const PORT = process.env.PORT | 6000;
 const PORT = 5000;
 
