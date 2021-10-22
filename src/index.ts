@@ -12,8 +12,8 @@ import './database/database';
 const ON_PRODUCTION = true;
 
 const server = express();
-// const PORT = process.env.PORT | 6000;
-const PORT = 5000;
+const PORT = process.env.PORT || 8000;
+// const PORT = 5000;
 
 server.use(express.json());
 // server.use(cors({ origin: process.env.ORIGIN, credentials: true }));
