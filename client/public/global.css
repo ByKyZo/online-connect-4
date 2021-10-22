@@ -1,0 +1,21 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --secondary: #262626;
+    --primary: #b5b5b5;
+    --white: #ffffff;
+
+    --background: #424242;
+
+    --text-font: 'Staatliches', cursive;
+    /* --number-font: 'Staatliches', cursive; */
+}
+
+html,
+button {
+    font-family: var(--text-font);
+}
