@@ -24,9 +24,9 @@ server.get('/toto', (req, res) => {
 });
 
 if (ON_PRODUCTION) {
-    server.use(express.static(path.join(__dirname, '..', '..', 'client', 'public')));
+    server.use(express.static(path.join(__dirname, '..', 'client', 'public')));
     server.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '..', '..', 'client', 'public', 'index.html'));
+        res.sendFile(path.join(__dirname, '..', 'client', 'public', 'index.html'));
     });
 }
 
