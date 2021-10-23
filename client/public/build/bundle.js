@@ -4,7 +4,7 @@ var app = (function () {
     'use strict';
 
     function noop() { }
-    function assign(tar, src) {
+    function assign$1(tar, src) {
         // @ts-ignore
         for (const k in src)
             tar[k] = src[k];
@@ -69,7 +69,7 @@ var app = (function () {
     }
     function get_slot_context(definition, ctx, $$scope, fn) {
         return definition[1] && fn
-            ? assign($$scope.ctx.slice(), definition[1](fn(ctx)))
+            ? assign$1($$scope.ctx.slice(), definition[1](fn(ctx)))
             : $$scope.ctx;
     }
     function get_slot_changes(definition, $$scope, dirty, fn) {
@@ -122,6 +122,12 @@ var app = (function () {
                 rest[k] = props[k];
         return rest;
     }
+    function null_to_empty(value) {
+        return value == null ? '' : value;
+    }
+    function action_destroyer(action_result) {
+        return action_result && is_function(action_result.destroy) ? action_result.destroy : noop;
+    }
     function append(target, node) {
         target.appendChild(node);
     }
@@ -140,12 +146,19 @@ var app = (function () {
     function space() {
         return text(' ');
     }
-    function empty() {
+    function empty$1() {
         return text('');
     }
     function listen(node, event, handler, options) {
         node.addEventListener(event, handler, options);
         return () => node.removeEventListener(event, handler, options);
+    }
+    function prevent_default(fn) {
+        return function (event) {
+            event.preventDefault();
+            // @ts-ignore
+            return fn.call(this, event);
+        };
     }
     function attr(node, attribute, value) {
         if (value == null)
@@ -153,29 +166,11 @@ var app = (function () {
         else if (node.getAttribute(attribute) !== value)
             node.setAttribute(attribute, value);
     }
-    function set_attributes(node, attributes) {
-        // @ts-ignore
-        const descriptors = Object.getOwnPropertyDescriptors(node.__proto__);
-        for (const key in attributes) {
-            if (attributes[key] == null) {
-                node.removeAttribute(key);
-            }
-            else if (key === 'style') {
-                node.style.cssText = attributes[key];
-            }
-            else if (key === '__value') {
-                node.value = node[key] = attributes[key];
-            }
-            else if (descriptors[key] && descriptors[key].set) {
-                node[key] = attributes[key];
-            }
-            else {
-                attr(node, key, attributes[key]);
-            }
-        }
-    }
     function children(element) {
         return Array.from(element.childNodes);
+    }
+    function set_input_value(input, value) {
+        input.value = value == null ? '' : value;
     }
     function set_style(node, key, value, important) {
         node.style.setProperty(key, value, important ? 'important' : '');
@@ -200,20 +195,6 @@ var app = (function () {
     }
     function onDestroy(fn) {
         get_current_component().$$.on_destroy.push(fn);
-    }
-    function createEventDispatcher() {
-        const component = get_current_component();
-        return (type, detail) => {
-            const callbacks = component.$$.callbacks[type];
-            if (callbacks) {
-                // TODO are there situations where events could be dispatched
-                // in a server (non-DOM) environment?
-                const event = custom_event(type, detail);
-                callbacks.slice().forEach(fn => {
-                    fn.call(component, event);
-                });
-            }
-        };
     }
     function setContext(key, context) {
         get_current_component().$$.context.set(key, context);
@@ -240,6 +221,9 @@ var app = (function () {
     }
     function add_render_callback(fn) {
         render_callbacks.push(fn);
+    }
+    function add_flush_callback(fn) {
+        flush_callbacks.push(fn);
     }
     let flushing = false;
     const seen_callbacks = new Set();
@@ -327,6 +311,12 @@ var app = (function () {
         }
     }
 
+    const globals = (typeof window !== 'undefined'
+        ? window
+        : typeof globalThis !== 'undefined'
+            ? globalThis
+            : global);
+
     function get_spread_update(levels, updates) {
         const update = {};
         const to_null_out = {};
@@ -362,6 +352,14 @@ var app = (function () {
     }
     function get_spread_object(spread_props) {
         return typeof spread_props === 'object' && spread_props !== null ? spread_props : {};
+    }
+
+    function bind(component, name, callback) {
+        const index = component.$$.props[name];
+        if (index !== undefined) {
+            component.$$.bound[index] = callback;
+            callback(component.$$.ctx[index]);
+        }
     }
     function create_component(block) {
         block && block.c();
@@ -405,7 +403,7 @@ var app = (function () {
         }
         component.$$.dirty[(i / 31) | 0] |= (1 << (i % 31));
     }
-    function init(component, options, instance, create_fragment, not_equal, props, append_styles, dirty = [-1]) {
+    function init$1(component, options, instance, create_fragment, not_equal, props, append_styles, dirty = [-1]) {
         const parent_component = current_component;
         set_current_component(component);
         const $$ = component.$$ = {
@@ -952,7 +950,7 @@ var app = (function () {
      * @param {string} uri
      * @return {?object}
      */
-    function pick(routes, uri) {
+    function pick$1(routes, uri) {
     	let bestMatch;
     	let defaultMatch;
 
@@ -1033,7 +1031,7 @@ var app = (function () {
      * @return {?object}
      */
     function match(route, uri) {
-    	return pick([route], uri);
+    	return pick$1([route], uri);
     }
 
     /**
@@ -1350,6 +1348,7 @@ var app = (function () {
     const globalHistory = createHistory(
     	canUseDOM && !isEmbeddedPage ? window : createMemorySource(),
     );
+    const { navigate } = globalHistory;
 
     // We need to keep the focus candidate in a separate file, so svelte does
     // not update, when we mutate it.
@@ -1535,10 +1534,10 @@ var app = (function () {
 
     /* node_modules\svelte-navigator\src\Router.svelte generated by Svelte v3.44.0 */
 
-    const file$4 = "node_modules\\svelte-navigator\\src\\Router.svelte";
+    const file$5 = "node_modules\\svelte-navigator\\src\\Router.svelte";
 
     // (195:0) {#if isTopLevelRouter && manageFocus && a11yConfig.announcements}
-    function create_if_block$1(ctx) {
+    function create_if_block$2(ctx) {
     	let div;
     	let t;
 
@@ -1550,7 +1549,7 @@ var app = (function () {
     			attr_dev(div, "aria-atomic", "true");
     			attr_dev(div, "aria-live", "polite");
     			attr_dev(div, "style", visuallyHiddenStyle);
-    			add_location(div, file$4, 195, 1, 5906);
+    			add_location(div, file$5, 195, 1, 5906);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -1566,7 +1565,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$1.name,
+    		id: create_if_block$2.name,
     		type: "if",
     		source: "(195:0) {#if isTopLevelRouter && manageFocus && a11yConfig.announcements}",
     		ctx
@@ -1575,7 +1574,7 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$6(ctx) {
+    function create_fragment$7(ctx) {
     	let div;
     	let t0;
     	let t1;
@@ -1583,7 +1582,7 @@ var app = (function () {
     	let current;
     	const default_slot_template = /*#slots*/ ctx[20].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[19], null);
-    	let if_block = /*isTopLevelRouter*/ ctx[2] && /*manageFocus*/ ctx[4] && /*a11yConfig*/ ctx[1].announcements && create_if_block$1(ctx);
+    	let if_block = /*isTopLevelRouter*/ ctx[2] && /*manageFocus*/ ctx[4] && /*a11yConfig*/ ctx[1].announcements && create_if_block$2(ctx);
 
     	const block = {
     		c: function create() {
@@ -1592,11 +1591,11 @@ var app = (function () {
     			if (default_slot) default_slot.c();
     			t1 = space();
     			if (if_block) if_block.c();
-    			if_block_anchor = empty();
+    			if_block_anchor = empty$1();
     			set_style(div, "display", "none");
     			attr_dev(div, "aria-hidden", "true");
     			attr_dev(div, "data-svnav-router", /*routerId*/ ctx[3]);
-    			add_location(div, file$4, 190, 0, 5750);
+    			add_location(div, file$5, 190, 0, 5750);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1653,7 +1652,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$6.name,
+    		id: create_fragment$7.name,
     		type: "component",
     		source: "",
     		ctx
@@ -1665,7 +1664,7 @@ var app = (function () {
     const createId$1 = createCounter();
     const defaultBasepath = "/";
 
-    function instance$6($$self, $$props, $$invalidate) {
+    function instance$7($$self, $$props, $$invalidate) {
     	let $location;
     	let $activeRoute;
     	let $prevLocation;
@@ -1822,7 +1821,7 @@ var app = (function () {
     		ROUTER,
     		globalHistory,
     		normalizePath,
-    		pick,
+    		pick: pick$1,
     		match,
     		normalizeLocation,
     		createLocation,
@@ -1891,7 +1890,7 @@ var app = (function () {
     			// will not find an active Route in SSR and in the browser it will only
     			// pick an active Route after all Routes have been registered.
     			{
-    				const bestMatch = pick($routes, $location.pathname);
+    				const bestMatch = pick$1($routes, $location.pathname);
     				activeRoute.set(bestMatch);
     			}
     		}
@@ -1953,11 +1952,11 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(
+    		init$1(
     			this,
     			options,
-    			instance$6,
-    			create_fragment$6,
+    			instance$7,
+    			create_fragment$7,
     			safe_not_equal,
     			{
     				basepath: 10,
@@ -1974,7 +1973,7 @@ var app = (function () {
     			component: this,
     			tagName: "Router",
     			options,
-    			id: create_fragment$6.name
+    			id: create_fragment$7.name
     		});
     	}
 
@@ -2237,7 +2236,7 @@ var app = (function () {
     }
 
     /* node_modules\svelte-navigator\src\Route.svelte generated by Svelte v3.44.0 */
-    const file$3 = "node_modules\\svelte-navigator\\src\\Route.svelte";
+    const file$4 = "node_modules\\svelte-navigator\\src\\Route.svelte";
 
     const get_default_slot_changes = dirty => ({
     	params: dirty & /*$params*/ 16,
@@ -2251,7 +2250,7 @@ var app = (function () {
     });
 
     // (97:0) {#if isActive}
-    function create_if_block(ctx) {
+    function create_if_block$1(ctx) {
     	let router;
     	let current;
 
@@ -2298,7 +2297,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block.name,
+    		id: create_if_block$1.name,
     		type: "if",
     		source: "(97:0) {#if isActive}",
     		ctx
@@ -2384,7 +2383,7 @@ var app = (function () {
     		let switch_instance_props = {};
 
     		for (let i = 0; i < switch_instance_spread_levels.length; i += 1) {
-    			switch_instance_props = assign(switch_instance_props, switch_instance_spread_levels[i]);
+    			switch_instance_props = assign$1(switch_instance_props, switch_instance_spread_levels[i]);
     		}
 
     		return {
@@ -2400,7 +2399,7 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			if (switch_instance) create_component(switch_instance.$$.fragment);
-    			switch_instance_anchor = empty();
+    			switch_instance_anchor = empty$1();
     		},
     		m: function mount(target, anchor) {
     			if (switch_instance) {
@@ -2490,7 +2489,7 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			if_block.c();
-    			if_block_anchor = empty();
+    			if_block_anchor = empty$1();
     		},
     		m: function mount(target, anchor) {
     			if_blocks[current_block_type_index].m(target, anchor);
@@ -2550,13 +2549,13 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$5(ctx) {
+    function create_fragment$6(ctx) {
     	let div0;
     	let t0;
     	let t1;
     	let div1;
     	let current;
-    	let if_block = /*isActive*/ ctx[2] && create_if_block(ctx);
+    	let if_block = /*isActive*/ ctx[2] && create_if_block$1(ctx);
 
     	const block = {
     		c: function create() {
@@ -2568,11 +2567,11 @@ var app = (function () {
     			set_style(div0, "display", "none");
     			attr_dev(div0, "aria-hidden", "true");
     			attr_dev(div0, "data-svnav-route-start", /*id*/ ctx[5]);
-    			add_location(div0, file$3, 95, 0, 2622);
+    			add_location(div0, file$4, 95, 0, 2622);
     			set_style(div1, "display", "none");
     			attr_dev(div1, "aria-hidden", "true");
     			attr_dev(div1, "data-svnav-route-end", /*id*/ ctx[5]);
-    			add_location(div1, file$3, 121, 0, 3295);
+    			add_location(div1, file$4, 121, 0, 3295);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2594,7 +2593,7 @@ var app = (function () {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block(ctx);
+    					if_block = create_if_block$1(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
     					if_block.m(t1.parentNode, t1);
@@ -2629,7 +2628,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$5.name,
+    		id: create_fragment$6.name,
     		type: "component",
     		source: "",
     		ctx
@@ -2640,7 +2639,7 @@ var app = (function () {
 
     const createId = createCounter();
 
-    function instance$5($$self, $$props, $$invalidate) {
+    function instance$6($$self, $$props, $$invalidate) {
     	let isActive;
     	const omit_props_names = ["path","component","meta","primary"];
     	let $$restProps = compute_rest_props($$props, omit_props_names);
@@ -2690,7 +2689,7 @@ var app = (function () {
     	}
 
     	$$self.$$set = $$new_props => {
-    		$$invalidate(23, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
+    		$$invalidate(23, $$props = assign$1(assign$1({}, $$props), exclude_internal_props($$new_props)));
     		$$invalidate(11, $$restProps = compute_rest_props($$props, omit_props_names));
     		if ('path' in $$new_props) $$invalidate(12, path = $$new_props.path);
     		if ('component' in $$new_props) $$invalidate(0, component = $$new_props.component);
@@ -2743,7 +2742,7 @@ var app = (function () {
     	});
 
     	$$self.$inject_state = $$new_props => {
-    		$$invalidate(23, $$props = assign(assign({}, $$props), $$new_props));
+    		$$invalidate(23, $$props = assign$1(assign$1({}, $$props), $$new_props));
     		if ('path' in $$props) $$invalidate(12, path = $$new_props.path);
     		if ('component' in $$props) $$invalidate(0, component = $$new_props.component);
     		if ('meta' in $$props) $$invalidate(13, meta = $$new_props.meta);
@@ -2828,7 +2827,7 @@ var app = (function () {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance$5, create_fragment$5, safe_not_equal, {
+    		init$1(this, options, instance$6, create_fragment$6, safe_not_equal, {
     			path: 12,
     			component: 0,
     			meta: 13,
@@ -2839,7 +2838,7 @@ var app = (function () {
     			component: this,
     			tagName: "Route",
     			options,
-    			id: create_fragment$5.name
+    			id: create_fragment$6.name
     		});
     	}
 
@@ -2878,311 +2877,49 @@ var app = (function () {
 
     var Route$1 = Route;
 
-    /* node_modules\svelte-navigator\src\Link.svelte generated by Svelte v3.44.0 */
-    const file$2 = "node_modules\\svelte-navigator\\src\\Link.svelte";
+    /*
+     * Adapted from https://github.com/EmilTholin/svelte-routing
+     *
+     * https://github.com/EmilTholin/svelte-routing/blob/master/LICENSE
+     */
 
-    function create_fragment$4(ctx) {
-    	let a;
-    	let current;
-    	let mounted;
-    	let dispose;
-    	const default_slot_template = /*#slots*/ ctx[13].default;
-    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[12], null);
-    	let a_levels = [{ href: /*href*/ ctx[0] }, /*ariaCurrent*/ ctx[2], /*props*/ ctx[1]];
-    	let a_data = {};
-
-    	for (let i = 0; i < a_levels.length; i += 1) {
-    		a_data = assign(a_data, a_levels[i]);
-    	}
-
-    	const block = {
-    		c: function create() {
-    			a = element("a");
-    			if (default_slot) default_slot.c();
-    			set_attributes(a, a_data);
-    			add_location(a, file$2, 63, 0, 1735);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, a, anchor);
-
-    			if (default_slot) {
-    				default_slot.m(a, null);
-    			}
-
-    			current = true;
-
-    			if (!mounted) {
-    				dispose = listen_dev(a, "click", /*onClick*/ ctx[4], false, false, false);
-    				mounted = true;
-    			}
-    		},
-    		p: function update(ctx, [dirty]) {
-    			if (default_slot) {
-    				if (default_slot.p && (!current || dirty & /*$$scope*/ 4096)) {
-    					update_slot_base(
-    						default_slot,
-    						default_slot_template,
-    						ctx,
-    						/*$$scope*/ ctx[12],
-    						!current
-    						? get_all_dirty_from_scope(/*$$scope*/ ctx[12])
-    						: get_slot_changes(default_slot_template, /*$$scope*/ ctx[12], dirty, null),
-    						null
-    					);
-    				}
-    			}
-
-    			set_attributes(a, a_data = get_spread_update(a_levels, [
-    				(!current || dirty & /*href*/ 1) && { href: /*href*/ ctx[0] },
-    				dirty & /*ariaCurrent*/ 4 && /*ariaCurrent*/ ctx[2],
-    				dirty & /*props*/ 2 && /*props*/ ctx[1]
-    			]));
-    		},
-    		i: function intro(local) {
-    			if (current) return;
-    			transition_in(default_slot, local);
-    			current = true;
-    		},
-    		o: function outro(local) {
-    			transition_out(default_slot, local);
-    			current = false;
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(a);
-    			if (default_slot) default_slot.d(detaching);
-    			mounted = false;
-    			dispose();
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$4.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function instance$4($$self, $$props, $$invalidate) {
-    	let href;
-    	let isPartiallyCurrent;
-    	let isCurrent;
-    	let ariaCurrent;
-    	let props;
-    	const omit_props_names = ["to","replace","state","getProps"];
-    	let $$restProps = compute_rest_props($$props, omit_props_names);
-    	let $location;
-    	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots('Link', slots, ['default']);
-    	let { to } = $$props;
-    	let { replace = false } = $$props;
-    	let { state = {} } = $$props;
-    	let { getProps = null } = $$props;
-    	usePreflightCheck(LINK_ID, $$props);
-    	const location = useLocation();
-    	validate_store(location, 'location');
-    	component_subscribe($$self, location, value => $$invalidate(11, $location = value));
-    	const dispatch = createEventDispatcher();
-    	const resolve = useResolve();
-    	const { navigate } = useHistory();
-
-    	function onClick(event) {
-    		dispatch("click", event);
-
-    		if (shouldNavigate(event)) {
+    const createAction = getAnchor => (node, navigate$1 = navigate) => {
+    	const handleClick = event => {
+    		const anchor = getAnchor(event);
+    		if (anchor && anchor.target === "" && shouldNavigate(event)) {
     			event.preventDefault();
-
-    			// Don't push another entry to the history stack when the user
-    			// clicks on a Link to the page they are currently on.
-    			const shouldReplace = isCurrent || replace;
-
-    			navigate(href, { state, replace: shouldReplace });
+    			const to = anchor.pathname + anchor.search + anchor.hash;
+    			navigate$1(to, { replace: anchor.hasAttribute("replace") });
     		}
-    	}
-
-    	$$self.$$set = $$new_props => {
-    		$$invalidate(18, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
-    		$$invalidate(17, $$restProps = compute_rest_props($$props, omit_props_names));
-    		if ('to' in $$new_props) $$invalidate(5, to = $$new_props.to);
-    		if ('replace' in $$new_props) $$invalidate(6, replace = $$new_props.replace);
-    		if ('state' in $$new_props) $$invalidate(7, state = $$new_props.state);
-    		if ('getProps' in $$new_props) $$invalidate(8, getProps = $$new_props.getProps);
-    		if ('$$scope' in $$new_props) $$invalidate(12, $$scope = $$new_props.$$scope);
     	};
+    	const unlisten = addListener(node, "click", handleClick);
+    	return { destroy: unlisten };
+    };
 
-    	$$self.$capture_state = () => ({
-    		createEventDispatcher,
-    		useLocation,
-    		useResolve,
-    		useHistory,
-    		usePreflightCheck,
-    		shouldNavigate,
-    		isFunction,
-    		startsWith,
-    		LINK_ID,
-    		to,
-    		replace,
-    		state,
-    		getProps,
-    		location,
-    		dispatch,
-    		resolve,
-    		navigate,
-    		onClick,
-    		href,
-    		isCurrent,
-    		isPartiallyCurrent,
-    		props,
-    		ariaCurrent,
-    		$location
-    	});
-
-    	$$self.$inject_state = $$new_props => {
-    		$$invalidate(18, $$props = assign(assign({}, $$props), $$new_props));
-    		if ('to' in $$props) $$invalidate(5, to = $$new_props.to);
-    		if ('replace' in $$props) $$invalidate(6, replace = $$new_props.replace);
-    		if ('state' in $$props) $$invalidate(7, state = $$new_props.state);
-    		if ('getProps' in $$props) $$invalidate(8, getProps = $$new_props.getProps);
-    		if ('href' in $$props) $$invalidate(0, href = $$new_props.href);
-    		if ('isCurrent' in $$props) $$invalidate(9, isCurrent = $$new_props.isCurrent);
-    		if ('isPartiallyCurrent' in $$props) $$invalidate(10, isPartiallyCurrent = $$new_props.isPartiallyCurrent);
-    		if ('props' in $$props) $$invalidate(1, props = $$new_props.props);
-    		if ('ariaCurrent' in $$props) $$invalidate(2, ariaCurrent = $$new_props.ariaCurrent);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	$$self.$$.update = () => {
-    		if ($$self.$$.dirty & /*to, $location*/ 2080) {
-    			// We need to pass location here to force re-resolution of the link,
-    			// when the pathname changes. Otherwise we could end up with stale path params,
-    			// when for example an :id changes in the parent Routes path
-    			$$invalidate(0, href = resolve(to, $location));
-    		}
-
-    		if ($$self.$$.dirty & /*$location, href*/ 2049) {
-    			$$invalidate(10, isPartiallyCurrent = startsWith($location.pathname, href));
-    		}
-
-    		if ($$self.$$.dirty & /*href, $location*/ 2049) {
-    			$$invalidate(9, isCurrent = href === $location.pathname);
-    		}
-
-    		if ($$self.$$.dirty & /*isCurrent*/ 512) {
-    			$$invalidate(2, ariaCurrent = isCurrent ? { "aria-current": "page" } : {});
-    		}
-
-    		$$invalidate(1, props = (() => {
-    			if (isFunction(getProps)) {
-    				const dynamicProps = getProps({
-    					location: $location,
-    					href,
-    					isPartiallyCurrent,
-    					isCurrent
-    				});
-
-    				return { ...$$restProps, ...dynamicProps };
-    			}
-
-    			return $$restProps;
-    		})());
-    	};
-
-    	$$props = exclude_internal_props($$props);
-
-    	return [
-    		href,
-    		props,
-    		ariaCurrent,
-    		location,
-    		onClick,
-    		to,
-    		replace,
-    		state,
-    		getProps,
-    		isCurrent,
-    		isPartiallyCurrent,
-    		$location,
-    		$$scope,
-    		slots
-    	];
-    }
-
-    class Link extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-    		init(this, options, instance$4, create_fragment$4, safe_not_equal, { to: 5, replace: 6, state: 7, getProps: 8 });
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Link",
-    			options,
-    			id: create_fragment$4.name
-    		});
-
-    		const { ctx } = this.$$;
-    		const props = options.props || {};
-
-    		if (/*to*/ ctx[5] === undefined && !('to' in props)) {
-    			console.warn("<Link> was created without expected prop 'to'");
-    		}
-    	}
-
-    	get to() {
-    		throw new Error("<Link>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set to(value) {
-    		throw new Error("<Link>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get replace() {
-    		throw new Error("<Link>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set replace(value) {
-    		throw new Error("<Link>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get state() {
-    		throw new Error("<Link>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set state(value) {
-    		throw new Error("<Link>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get getProps() {
-    		throw new Error("<Link>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set getProps(value) {
-    		throw new Error("<Link>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-    }
-
-    var Link$1 = Link;
+    // prettier-ignore
+    /**
+     * A link action that can be added to <a href=""> tags rather
+     * than using the <Link> component.
+     *
+     * Example:
+     * ```html
+     * <a href="/post/{postId}" use:link>{post.title}</a>
+     * ```
+     */
+    const link = /*#__PURE__*/createAction(event => event.currentTarget); // eslint-disable-line spaced-comment, max-len
 
     /* src\pages\Game.svelte generated by Svelte v3.44.0 */
 
-    const file$1 = "src\\pages\\Game.svelte";
+    const file$3 = "src\\pages\\Game.svelte";
 
-    function create_fragment$3(ctx) {
+    function create_fragment$5(ctx) {
     	let h1;
 
     	const block = {
     		c: function create() {
     			h1 = element("h1");
     			h1.textContent = "Game";
-    			add_location(h1, file$1, 2, 0, 31);
+    			add_location(h1, file$3, 2, 0, 31);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -3200,7 +2937,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$3.name,
+    		id: create_fragment$5.name,
     		type: "component",
     		source: "",
     		ctx
@@ -3209,7 +2946,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$3($$self, $$props) {
+    function instance$5($$self, $$props) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Game', slots, []);
     	const writable_props = [];
@@ -3224,162 +2961,3652 @@ var app = (function () {
     class Game extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$3, create_fragment$3, safe_not_equal, {});
+    		init$1(this, options, instance$5, create_fragment$5, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Game",
     			options,
-    			id: create_fragment$3.name
+    			id: create_fragment$5.name
     		});
     	}
     }
 
-    /* src\pages\Home.svelte generated by Svelte v3.44.0 */
-    const file = "src\\pages\\Home.svelte";
+    /*! js-cookie v3.0.1 | MIT */
+    /* eslint-disable no-var */
+    function assign (target) {
+      for (var i = 1; i < arguments.length; i++) {
+        var source = arguments[i];
+        for (var key in source) {
+          target[key] = source[key];
+        }
+      }
+      return target
+    }
+    /* eslint-enable no-var */
 
-    // (9:8) <Link to="/game">
-    function create_default_slot_3(ctx) {
-    	let t;
+    /* eslint-disable no-var */
+    var defaultConverter = {
+      read: function (value) {
+        if (value[0] === '"') {
+          value = value.slice(1, -1);
+        }
+        return value.replace(/(%[\dA-F]{2})+/gi, decodeURIComponent)
+      },
+      write: function (value) {
+        return encodeURIComponent(value).replace(
+          /%(2[346BF]|3[AC-F]|40|5[BDE]|60|7[BCD])/g,
+          decodeURIComponent
+        )
+      }
+    };
+    /* eslint-enable no-var */
+
+    /* eslint-disable no-var */
+
+    function init (converter, defaultAttributes) {
+      function set (key, value, attributes) {
+        if (typeof document === 'undefined') {
+          return
+        }
+
+        attributes = assign({}, defaultAttributes, attributes);
+
+        if (typeof attributes.expires === 'number') {
+          attributes.expires = new Date(Date.now() + attributes.expires * 864e5);
+        }
+        if (attributes.expires) {
+          attributes.expires = attributes.expires.toUTCString();
+        }
+
+        key = encodeURIComponent(key)
+          .replace(/%(2[346B]|5E|60|7C)/g, decodeURIComponent)
+          .replace(/[()]/g, escape);
+
+        var stringifiedAttributes = '';
+        for (var attributeName in attributes) {
+          if (!attributes[attributeName]) {
+            continue
+          }
+
+          stringifiedAttributes += '; ' + attributeName;
+
+          if (attributes[attributeName] === true) {
+            continue
+          }
+
+          // Considers RFC 6265 section 5.2:
+          // ...
+          // 3.  If the remaining unparsed-attributes contains a %x3B (";")
+          //     character:
+          // Consume the characters of the unparsed-attributes up to,
+          // not including, the first %x3B (";") character.
+          // ...
+          stringifiedAttributes += '=' + attributes[attributeName].split(';')[0];
+        }
+
+        return (document.cookie =
+          key + '=' + converter.write(value, key) + stringifiedAttributes)
+      }
+
+      function get (key) {
+        if (typeof document === 'undefined' || (arguments.length && !key)) {
+          return
+        }
+
+        // To prevent the for loop in the first place assign an empty array
+        // in case there are no cookies at all.
+        var cookies = document.cookie ? document.cookie.split('; ') : [];
+        var jar = {};
+        for (var i = 0; i < cookies.length; i++) {
+          var parts = cookies[i].split('=');
+          var value = parts.slice(1).join('=');
+
+          try {
+            var foundKey = decodeURIComponent(parts[0]);
+            jar[foundKey] = converter.read(value, foundKey);
+
+            if (key === foundKey) {
+              break
+            }
+          } catch (e) {}
+        }
+
+        return key ? jar[key] : jar
+      }
+
+      return Object.create(
+        {
+          set: set,
+          get: get,
+          remove: function (key, attributes) {
+            set(
+              key,
+              '',
+              assign({}, attributes, {
+                expires: -1
+              })
+            );
+          },
+          withAttributes: function (attributes) {
+            return init(this.converter, assign({}, this.attributes, attributes))
+          },
+          withConverter: function (converter) {
+            return init(assign({}, this.converter, converter), this.attributes)
+          }
+        },
+        {
+          attributes: { value: Object.freeze(defaultAttributes) },
+          converter: { value: Object.freeze(converter) }
+        }
+      )
+    }
+
+    var api = init(defaultConverter, { path: '/' });
+
+    /* src\components\widgets\Modal.svelte generated by Svelte v3.44.0 */
+
+    const file$2 = "src\\components\\widgets\\Modal.svelte";
+
+    // (7:0) {#if isOpen}
+    function create_if_block(ctx) {
+    	let div1;
+    	let div0;
+    	let div0_class_value;
+    	let current;
+    	const default_slot_template = /*#slots*/ ctx[3].default;
+    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[2], null);
 
     	const block = {
     		c: function create() {
-    			t = text("to gameeee");
+    			div1 = element("div");
+    			div0 = element("div");
+    			if (default_slot) default_slot.c();
+    			attr_dev(div0, "class", div0_class_value = "" + (null_to_empty(`modal ${/*clazz*/ ctx[1] || ''}`) + " svelte-4msw28"));
+    			add_location(div0, file$2, 8, 8, 157);
+    			attr_dev(div1, "class", "overlay svelte-4msw28");
+    			add_location(div1, file$2, 7, 4, 126);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
+    			insert_dev(target, div1, anchor);
+    			append_dev(div1, div0);
+
+    			if (default_slot) {
+    				default_slot.m(div0, null);
+    			}
+
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			if (default_slot) {
+    				if (default_slot.p && (!current || dirty & /*$$scope*/ 4)) {
+    					update_slot_base(
+    						default_slot,
+    						default_slot_template,
+    						ctx,
+    						/*$$scope*/ ctx[2],
+    						!current
+    						? get_all_dirty_from_scope(/*$$scope*/ ctx[2])
+    						: get_slot_changes(default_slot_template, /*$$scope*/ ctx[2], dirty, null),
+    						null
+    					);
+    				}
+    			}
+
+    			if (!current || dirty & /*clazz*/ 2 && div0_class_value !== (div0_class_value = "" + (null_to_empty(`modal ${/*clazz*/ ctx[1] || ''}`) + " svelte-4msw28"))) {
+    				attr_dev(div0, "class", div0_class_value);
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(default_slot, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(default_slot, local);
+    			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
+    			if (detaching) detach_dev(div1);
+    			if (default_slot) default_slot.d(detaching);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_3.name,
-    		type: "slot",
-    		source: "(9:8) <Link to=\\\"/game\\\">",
+    		id: create_if_block.name,
+    		type: "if",
+    		source: "(7:0) {#if isOpen}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (11:12) <Link class="" to="/game/ia">
-    function create_default_slot_2$1(ctx) {
-    	let img;
-    	let img_src_value;
-    	let t0;
-    	let span;
+    function create_fragment$4(ctx) {
+    	let if_block_anchor;
+    	let current;
+    	let if_block = /*isOpen*/ ctx[0] && create_if_block(ctx);
 
     	const block = {
     		c: function create() {
-    			img = element("img");
-    			t0 = space();
-    			span = element("span");
-    			span.textContent = "ROBOT";
-    			attr_dev(img, "class", "mode-icon svelte-702isp");
-    			if (!src_url_equal(img.src, img_src_value = "assets/robot.svg")) attr_dev(img, "src", img_src_value);
-    			attr_dev(img, "alt", "");
-    			add_location(img, file, 11, 16, 306);
-    			attr_dev(span, "class", "mode-label svelte-702isp");
-    			add_location(span, file, 12, 16, 379);
+    			if (if_block) if_block.c();
+    			if_block_anchor = empty$1();
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, img, anchor);
-    			insert_dev(target, t0, anchor);
-    			insert_dev(target, span, anchor);
+    			if (if_block) if_block.m(target, anchor);
+    			insert_dev(target, if_block_anchor, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (/*isOpen*/ ctx[0]) {
+    				if (if_block) {
+    					if_block.p(ctx, dirty);
+
+    					if (dirty & /*isOpen*/ 1) {
+    						transition_in(if_block, 1);
+    					}
+    				} else {
+    					if_block = create_if_block(ctx);
+    					if_block.c();
+    					transition_in(if_block, 1);
+    					if_block.m(if_block_anchor.parentNode, if_block_anchor);
+    				}
+    			} else if (if_block) {
+    				group_outros();
+
+    				transition_out(if_block, 1, 1, () => {
+    					if_block = null;
+    				});
+
+    				check_outros();
+    			}
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(if_block);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(if_block);
+    			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(img);
-    			if (detaching) detach_dev(t0);
-    			if (detaching) detach_dev(span);
+    			if (if_block) if_block.d(detaching);
+    			if (detaching) detach_dev(if_block_anchor);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_2$1.name,
-    		type: "slot",
-    		source: "(11:12) <Link class=\\\"\\\" to=\\\"/game/ia\\\">",
+    		id: create_fragment$4.name,
+    		type: "component",
+    		source: "",
     		ctx
     	});
 
     	return block;
     }
 
-    // (15:12) <Link class="select-box__item" to="/create-party">
-    function create_default_slot_1$1(ctx) {
-    	let img;
-    	let img_src_value;
-    	let t0;
-    	let span;
+    function instance$4($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('Modal', slots, ['default']);
+    	let { isOpen = false } = $$props;
+    	let { class: clazz = '' } = $$props;
+    	const writable_props = ['isOpen', 'class'];
 
-    	const block = {
-    		c: function create() {
-    			img = element("img");
-    			t0 = space();
-    			span = element("span");
-    			span.textContent = "CREATE PARTY";
-    			attr_dev(img, "class", "mode-icon svelte-702isp");
-    			if (!src_url_equal(img.src, img_src_value = "assets/robot.svg")) attr_dev(img, "src", img_src_value);
-    			attr_dev(img, "alt", "");
-    			add_location(img, file, 15, 16, 519);
-    			attr_dev(span, "class", "mode-label svelte-702isp");
-    			add_location(span, file, 16, 16, 592);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, img, anchor);
-    			insert_dev(target, t0, anchor);
-    			insert_dev(target, span, anchor);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(img);
-    			if (detaching) detach_dev(t0);
-    			if (detaching) detach_dev(span);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_default_slot_1$1.name,
-    		type: "slot",
-    		source: "(15:12) <Link class=\\\"select-box__item\\\" to=\\\"/create-party\\\">",
-    		ctx
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Modal> was created with unknown prop '${key}'`);
     	});
 
-    	return block;
+    	$$self.$$set = $$props => {
+    		if ('isOpen' in $$props) $$invalidate(0, isOpen = $$props.isOpen);
+    		if ('class' in $$props) $$invalidate(1, clazz = $$props.class);
+    		if ('$$scope' in $$props) $$invalidate(2, $$scope = $$props.$$scope);
+    	};
+
+    	$$self.$capture_state = () => ({ isOpen, clazz });
+
+    	$$self.$inject_state = $$props => {
+    		if ('isOpen' in $$props) $$invalidate(0, isOpen = $$props.isOpen);
+    		if ('clazz' in $$props) $$invalidate(1, clazz = $$props.clazz);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [isOpen, clazz, $$scope, slots];
     }
 
-    // (19:12) <Link class="select-box__item" to="/join-party">
+    class Modal extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init$1(this, options, instance$4, create_fragment$4, safe_not_equal, { isOpen: 0, class: 1 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "Modal",
+    			options,
+    			id: create_fragment$4.name
+    		});
+    	}
+
+    	get isOpen() {
+    		throw new Error("<Modal>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set isOpen(value) {
+    		throw new Error("<Modal>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	get class() {
+    		throw new Error("<Modal>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set class(value) {
+    		throw new Error("<Modal>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /**
+     * Parses an URI
+     *
+     * @author Steven Levithan <stevenlevithan.com> (MIT license)
+     * @api private
+     */
+    var re = /^(?:(?![^:@]+:[^:@\/]*@)(http|https|ws|wss):\/\/)?((?:(([^:@]*)(?::([^:@]*))?)?@)?((?:[a-f0-9]{0,4}:){2,7}[a-f0-9]{0,4}|[^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/;
+
+    var parts = [
+        'source', 'protocol', 'authority', 'userInfo', 'user', 'password', 'host', 'port', 'relative', 'path', 'directory', 'file', 'query', 'anchor'
+    ];
+
+    var parseuri = function parseuri(str) {
+        var src = str,
+            b = str.indexOf('['),
+            e = str.indexOf(']');
+
+        if (b != -1 && e != -1) {
+            str = str.substring(0, b) + str.substring(b, e).replace(/:/g, ';') + str.substring(e, str.length);
+        }
+
+        var m = re.exec(str || ''),
+            uri = {},
+            i = 14;
+
+        while (i--) {
+            uri[parts[i]] = m[i] || '';
+        }
+
+        if (b != -1 && e != -1) {
+            uri.source = src;
+            uri.host = uri.host.substring(1, uri.host.length - 1).replace(/;/g, ':');
+            uri.authority = uri.authority.replace('[', '').replace(']', '').replace(/;/g, ':');
+            uri.ipv6uri = true;
+        }
+
+        uri.pathNames = pathNames(uri, uri['path']);
+        uri.queryKey = queryKey(uri, uri['query']);
+
+        return uri;
+    };
+
+    function pathNames(obj, path) {
+        var regx = /\/{2,9}/g,
+            names = path.replace(regx, "/").split("/");
+
+        if (path.substr(0, 1) == '/' || path.length === 0) {
+            names.splice(0, 1);
+        }
+        if (path.substr(path.length - 1, 1) == '/') {
+            names.splice(names.length - 1, 1);
+        }
+
+        return names;
+    }
+
+    function queryKey(uri, query) {
+        var data = {};
+
+        query.replace(/(?:^|&)([^&=]*)=?([^&]*)/g, function ($0, $1, $2) {
+            if ($1) {
+                data[$1] = $2;
+            }
+        });
+
+        return data;
+    }
+
+    /**
+     * URL parser.
+     *
+     * @param uri - url
+     * @param path - the request path of the connection
+     * @param loc - An object meant to mimic window.location.
+     *        Defaults to window.location.
+     * @public
+     */
+    function url(uri, path = "", loc) {
+        let obj = uri;
+        // default to window.location
+        loc = loc || (typeof location !== "undefined" && location);
+        if (null == uri)
+            uri = loc.protocol + "//" + loc.host;
+        // relative path support
+        if (typeof uri === "string") {
+            if ("/" === uri.charAt(0)) {
+                if ("/" === uri.charAt(1)) {
+                    uri = loc.protocol + uri;
+                }
+                else {
+                    uri = loc.host + uri;
+                }
+            }
+            if (!/^(https?|wss?):\/\//.test(uri)) {
+                if ("undefined" !== typeof loc) {
+                    uri = loc.protocol + "//" + uri;
+                }
+                else {
+                    uri = "https://" + uri;
+                }
+            }
+            // parse
+            obj = parseuri(uri);
+        }
+        // make sure we treat `localhost:80` and `localhost` equally
+        if (!obj.port) {
+            if (/^(http|ws)$/.test(obj.protocol)) {
+                obj.port = "80";
+            }
+            else if (/^(http|ws)s$/.test(obj.protocol)) {
+                obj.port = "443";
+            }
+        }
+        obj.path = obj.path || "/";
+        const ipv6 = obj.host.indexOf(":") !== -1;
+        const host = ipv6 ? "[" + obj.host + "]" : obj.host;
+        // define unique id
+        obj.id = obj.protocol + "://" + host + ":" + obj.port + path;
+        // define href
+        obj.href =
+            obj.protocol +
+                "://" +
+                host +
+                (loc && loc.port === obj.port ? "" : ":" + obj.port);
+        return obj;
+    }
+
+    function createCommonjsModule(fn) {
+      var module = { exports: {} };
+    	return fn(module, module.exports), module.exports;
+    }
+
+    var hasCors = createCommonjsModule(function (module) {
+    /**
+     * Module exports.
+     *
+     * Logic borrowed from Modernizr:
+     *
+     *   - https://github.com/Modernizr/Modernizr/blob/master/feature-detects/cors.js
+     */
+
+    try {
+      module.exports = typeof XMLHttpRequest !== 'undefined' &&
+        'withCredentials' in new XMLHttpRequest();
+    } catch (err) {
+      // if XMLHttp support is disabled in IE then it will throw
+      // when trying to create
+      module.exports = false;
+    }
+    });
+
+    var globalThis$1 = (() => {
+        if (typeof self !== "undefined") {
+            return self;
+        }
+        else if (typeof window !== "undefined") {
+            return window;
+        }
+        else {
+            return Function("return this")();
+        }
+    })();
+
+    // browser shim for xmlhttprequest module
+    function XMLHttpRequest$1 (opts) {
+        const xdomain = opts.xdomain;
+        // XMLHttpRequest can be disabled on IE
+        try {
+            if ("undefined" !== typeof XMLHttpRequest && (!xdomain || hasCors)) {
+                return new XMLHttpRequest();
+            }
+        }
+        catch (e) { }
+        if (!xdomain) {
+            try {
+                return new globalThis$1[["Active"].concat("Object").join("X")]("Microsoft.XMLHTTP");
+            }
+            catch (e) { }
+        }
+    }
+
+    function pick(obj, ...attr) {
+        return attr.reduce((acc, k) => {
+            if (obj.hasOwnProperty(k)) {
+                acc[k] = obj[k];
+            }
+            return acc;
+        }, {});
+    }
+    // Keep a reference to the real timeout functions so they can be used when overridden
+    const NATIVE_SET_TIMEOUT = setTimeout;
+    const NATIVE_CLEAR_TIMEOUT = clearTimeout;
+    function installTimerFunctions(obj, opts) {
+        if (opts.useNativeTimers) {
+            obj.setTimeoutFn = NATIVE_SET_TIMEOUT.bind(globalThis$1);
+            obj.clearTimeoutFn = NATIVE_CLEAR_TIMEOUT.bind(globalThis$1);
+        }
+        else {
+            obj.setTimeoutFn = setTimeout.bind(globalThis$1);
+            obj.clearTimeoutFn = clearTimeout.bind(globalThis$1);
+        }
+    }
+
+    /**
+     * Expose `Emitter`.
+     */
+
+    var Emitter_1 = Emitter;
+
+    /**
+     * Initialize a new `Emitter`.
+     *
+     * @api public
+     */
+
+    function Emitter(obj) {
+      if (obj) return mixin(obj);
+    }
+
+    /**
+     * Mixin the emitter properties.
+     *
+     * @param {Object} obj
+     * @return {Object}
+     * @api private
+     */
+
+    function mixin(obj) {
+      for (var key in Emitter.prototype) {
+        obj[key] = Emitter.prototype[key];
+      }
+      return obj;
+    }
+
+    /**
+     * Listen on the given `event` with `fn`.
+     *
+     * @param {String} event
+     * @param {Function} fn
+     * @return {Emitter}
+     * @api public
+     */
+
+    Emitter.prototype.on =
+    Emitter.prototype.addEventListener = function(event, fn){
+      this._callbacks = this._callbacks || {};
+      (this._callbacks['$' + event] = this._callbacks['$' + event] || [])
+        .push(fn);
+      return this;
+    };
+
+    /**
+     * Adds an `event` listener that will be invoked a single
+     * time then automatically removed.
+     *
+     * @param {String} event
+     * @param {Function} fn
+     * @return {Emitter}
+     * @api public
+     */
+
+    Emitter.prototype.once = function(event, fn){
+      function on() {
+        this.off(event, on);
+        fn.apply(this, arguments);
+      }
+
+      on.fn = fn;
+      this.on(event, on);
+      return this;
+    };
+
+    /**
+     * Remove the given callback for `event` or all
+     * registered callbacks.
+     *
+     * @param {String} event
+     * @param {Function} fn
+     * @return {Emitter}
+     * @api public
+     */
+
+    Emitter.prototype.off =
+    Emitter.prototype.removeListener =
+    Emitter.prototype.removeAllListeners =
+    Emitter.prototype.removeEventListener = function(event, fn){
+      this._callbacks = this._callbacks || {};
+
+      // all
+      if (0 == arguments.length) {
+        this._callbacks = {};
+        return this;
+      }
+
+      // specific event
+      var callbacks = this._callbacks['$' + event];
+      if (!callbacks) return this;
+
+      // remove all handlers
+      if (1 == arguments.length) {
+        delete this._callbacks['$' + event];
+        return this;
+      }
+
+      // remove specific handler
+      var cb;
+      for (var i = 0; i < callbacks.length; i++) {
+        cb = callbacks[i];
+        if (cb === fn || cb.fn === fn) {
+          callbacks.splice(i, 1);
+          break;
+        }
+      }
+
+      // Remove event specific arrays for event types that no
+      // one is subscribed for to avoid memory leak.
+      if (callbacks.length === 0) {
+        delete this._callbacks['$' + event];
+      }
+
+      return this;
+    };
+
+    /**
+     * Emit `event` with the given args.
+     *
+     * @param {String} event
+     * @param {Mixed} ...
+     * @return {Emitter}
+     */
+
+    Emitter.prototype.emit = function(event){
+      this._callbacks = this._callbacks || {};
+
+      var args = new Array(arguments.length - 1)
+        , callbacks = this._callbacks['$' + event];
+
+      for (var i = 1; i < arguments.length; i++) {
+        args[i - 1] = arguments[i];
+      }
+
+      if (callbacks) {
+        callbacks = callbacks.slice(0);
+        for (var i = 0, len = callbacks.length; i < len; ++i) {
+          callbacks[i].apply(this, args);
+        }
+      }
+
+      return this;
+    };
+
+    // alias used for reserved events (protected method)
+    Emitter.prototype.emitReserved = Emitter.prototype.emit;
+
+    /**
+     * Return array of callbacks for `event`.
+     *
+     * @param {String} event
+     * @return {Array}
+     * @api public
+     */
+
+    Emitter.prototype.listeners = function(event){
+      this._callbacks = this._callbacks || {};
+      return this._callbacks['$' + event] || [];
+    };
+
+    /**
+     * Check if this emitter has `event` handlers.
+     *
+     * @param {String} event
+     * @return {Boolean}
+     * @api public
+     */
+
+    Emitter.prototype.hasListeners = function(event){
+      return !! this.listeners(event).length;
+    };
+
+    const PACKET_TYPES = Object.create(null); // no Map = no polyfill
+    PACKET_TYPES["open"] = "0";
+    PACKET_TYPES["close"] = "1";
+    PACKET_TYPES["ping"] = "2";
+    PACKET_TYPES["pong"] = "3";
+    PACKET_TYPES["message"] = "4";
+    PACKET_TYPES["upgrade"] = "5";
+    PACKET_TYPES["noop"] = "6";
+    const PACKET_TYPES_REVERSE = Object.create(null);
+    Object.keys(PACKET_TYPES).forEach(key => {
+        PACKET_TYPES_REVERSE[PACKET_TYPES[key]] = key;
+    });
+    const ERROR_PACKET = { type: "error", data: "parser error" };
+
+    const withNativeBlob$1 = typeof Blob === "function" ||
+        (typeof Blob !== "undefined" &&
+            Object.prototype.toString.call(Blob) === "[object BlobConstructor]");
+    const withNativeArrayBuffer$2 = typeof ArrayBuffer === "function";
+    // ArrayBuffer.isView method is not defined in IE10
+    const isView$1 = obj => {
+        return typeof ArrayBuffer.isView === "function"
+            ? ArrayBuffer.isView(obj)
+            : obj && obj.buffer instanceof ArrayBuffer;
+    };
+    const encodePacket = ({ type, data }, supportsBinary, callback) => {
+        if (withNativeBlob$1 && data instanceof Blob) {
+            if (supportsBinary) {
+                return callback(data);
+            }
+            else {
+                return encodeBlobAsBase64(data, callback);
+            }
+        }
+        else if (withNativeArrayBuffer$2 &&
+            (data instanceof ArrayBuffer || isView$1(data))) {
+            if (supportsBinary) {
+                return callback(data);
+            }
+            else {
+                return encodeBlobAsBase64(new Blob([data]), callback);
+            }
+        }
+        // plain string
+        return callback(PACKET_TYPES[type] + (data || ""));
+    };
+    const encodeBlobAsBase64 = (data, callback) => {
+        const fileReader = new FileReader();
+        fileReader.onload = function () {
+            const content = fileReader.result.split(",")[1];
+            callback("b" + content);
+        };
+        return fileReader.readAsDataURL(data);
+    };
+
+    /*
+     * base64-arraybuffer 1.0.1 <https://github.com/niklasvh/base64-arraybuffer>
+     * Copyright (c) 2021 Niklas von Hertzen <https://hertzen.com>
+     * Released under MIT License
+     */
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    // Use a lookup table to find the index.
+    var lookup$1 = typeof Uint8Array === 'undefined' ? [] : new Uint8Array(256);
+    for (var i$1 = 0; i$1 < chars.length; i$1++) {
+        lookup$1[chars.charCodeAt(i$1)] = i$1;
+    }
+    var decode$2 = function (base64) {
+        var bufferLength = base64.length * 0.75, len = base64.length, i, p = 0, encoded1, encoded2, encoded3, encoded4;
+        if (base64[base64.length - 1] === '=') {
+            bufferLength--;
+            if (base64[base64.length - 2] === '=') {
+                bufferLength--;
+            }
+        }
+        var arraybuffer = new ArrayBuffer(bufferLength), bytes = new Uint8Array(arraybuffer);
+        for (i = 0; i < len; i += 4) {
+            encoded1 = lookup$1[base64.charCodeAt(i)];
+            encoded2 = lookup$1[base64.charCodeAt(i + 1)];
+            encoded3 = lookup$1[base64.charCodeAt(i + 2)];
+            encoded4 = lookup$1[base64.charCodeAt(i + 3)];
+            bytes[p++] = (encoded1 << 2) | (encoded2 >> 4);
+            bytes[p++] = ((encoded2 & 15) << 4) | (encoded3 >> 2);
+            bytes[p++] = ((encoded3 & 3) << 6) | (encoded4 & 63);
+        }
+        return arraybuffer;
+    };
+
+    const withNativeArrayBuffer$1 = typeof ArrayBuffer === "function";
+    const decodePacket = (encodedPacket, binaryType) => {
+        if (typeof encodedPacket !== "string") {
+            return {
+                type: "message",
+                data: mapBinary(encodedPacket, binaryType)
+            };
+        }
+        const type = encodedPacket.charAt(0);
+        if (type === "b") {
+            return {
+                type: "message",
+                data: decodeBase64Packet(encodedPacket.substring(1), binaryType)
+            };
+        }
+        const packetType = PACKET_TYPES_REVERSE[type];
+        if (!packetType) {
+            return ERROR_PACKET;
+        }
+        return encodedPacket.length > 1
+            ? {
+                type: PACKET_TYPES_REVERSE[type],
+                data: encodedPacket.substring(1)
+            }
+            : {
+                type: PACKET_TYPES_REVERSE[type]
+            };
+    };
+    const decodeBase64Packet = (data, binaryType) => {
+        if (withNativeArrayBuffer$1) {
+            const decoded = decode$2(data);
+            return mapBinary(decoded, binaryType);
+        }
+        else {
+            return { base64: true, data }; // fallback for old browsers
+        }
+    };
+    const mapBinary = (data, binaryType) => {
+        switch (binaryType) {
+            case "blob":
+                return data instanceof ArrayBuffer ? new Blob([data]) : data;
+            case "arraybuffer":
+            default:
+                return data; // assuming the data is already an ArrayBuffer
+        }
+    };
+
+    const SEPARATOR = String.fromCharCode(30); // see https://en.wikipedia.org/wiki/Delimiter#ASCII_delimited_text
+    const encodePayload = (packets, callback) => {
+        // some packets may be added to the array while encoding, so the initial length must be saved
+        const length = packets.length;
+        const encodedPackets = new Array(length);
+        let count = 0;
+        packets.forEach((packet, i) => {
+            // force base64 encoding for binary packets
+            encodePacket(packet, false, encodedPacket => {
+                encodedPackets[i] = encodedPacket;
+                if (++count === length) {
+                    callback(encodedPackets.join(SEPARATOR));
+                }
+            });
+        });
+    };
+    const decodePayload = (encodedPayload, binaryType) => {
+        const encodedPackets = encodedPayload.split(SEPARATOR);
+        const packets = [];
+        for (let i = 0; i < encodedPackets.length; i++) {
+            const decodedPacket = decodePacket(encodedPackets[i], binaryType);
+            packets.push(decodedPacket);
+            if (decodedPacket.type === "error") {
+                break;
+            }
+        }
+        return packets;
+    };
+    const protocol$1 = 4;
+
+    class Transport extends Emitter_1 {
+        /**
+         * Transport abstract constructor.
+         *
+         * @param {Object} options.
+         * @api private
+         */
+        constructor(opts) {
+            super();
+            this.writable = false;
+            installTimerFunctions(this, opts);
+            this.opts = opts;
+            this.query = opts.query;
+            this.readyState = "";
+            this.socket = opts.socket;
+        }
+        /**
+         * Emits an error.
+         *
+         * @param {String} str
+         * @return {Transport} for chaining
+         * @api protected
+         */
+        onError(msg, desc) {
+            const err = new Error(msg);
+            // @ts-ignore
+            err.type = "TransportError";
+            // @ts-ignore
+            err.description = desc;
+            super.emit("error", err);
+            return this;
+        }
+        /**
+         * Opens the transport.
+         *
+         * @api public
+         */
+        open() {
+            if ("closed" === this.readyState || "" === this.readyState) {
+                this.readyState = "opening";
+                this.doOpen();
+            }
+            return this;
+        }
+        /**
+         * Closes the transport.
+         *
+         * @api public
+         */
+        close() {
+            if ("opening" === this.readyState || "open" === this.readyState) {
+                this.doClose();
+                this.onClose();
+            }
+            return this;
+        }
+        /**
+         * Sends multiple packets.
+         *
+         * @param {Array} packets
+         * @api public
+         */
+        send(packets) {
+            if ("open" === this.readyState) {
+                this.write(packets);
+            }
+        }
+        /**
+         * Called upon open
+         *
+         * @api protected
+         */
+        onOpen() {
+            this.readyState = "open";
+            this.writable = true;
+            super.emit("open");
+        }
+        /**
+         * Called with data.
+         *
+         * @param {String} data
+         * @api protected
+         */
+        onData(data) {
+            const packet = decodePacket(data, this.socket.binaryType);
+            this.onPacket(packet);
+        }
+        /**
+         * Called with a decoded packet.
+         *
+         * @api protected
+         */
+        onPacket(packet) {
+            super.emit("packet", packet);
+        }
+        /**
+         * Called upon close.
+         *
+         * @api protected
+         */
+        onClose() {
+            this.readyState = "closed";
+            super.emit("close");
+        }
+    }
+
+    var alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_'.split('')
+      , length = 64
+      , map = {}
+      , seed = 0
+      , i = 0
+      , prev;
+
+    /**
+     * Return a string representing the specified number.
+     *
+     * @param {Number} num The number to convert.
+     * @returns {String} The string representation of the number.
+     * @api public
+     */
+    function encode$1(num) {
+      var encoded = '';
+
+      do {
+        encoded = alphabet[num % length] + encoded;
+        num = Math.floor(num / length);
+      } while (num > 0);
+
+      return encoded;
+    }
+
+    /**
+     * Return the integer value specified by the given string.
+     *
+     * @param {String} str The string to convert.
+     * @returns {Number} The integer value represented by the string.
+     * @api public
+     */
+    function decode$1(str) {
+      var decoded = 0;
+
+      for (i = 0; i < str.length; i++) {
+        decoded = decoded * length + map[str.charAt(i)];
+      }
+
+      return decoded;
+    }
+
+    /**
+     * Yeast: A tiny growing id generator.
+     *
+     * @returns {String} A unique id.
+     * @api public
+     */
+    function yeast() {
+      var now = encode$1(+new Date());
+
+      if (now !== prev) return seed = 0, prev = now;
+      return now +'.'+ encode$1(seed++);
+    }
+
+    //
+    // Map each character to its index.
+    //
+    for (; i < length; i++) map[alphabet[i]] = i;
+
+    //
+    // Expose the `yeast`, `encode` and `decode` functions.
+    //
+    yeast.encode = encode$1;
+    yeast.decode = decode$1;
+    var yeast_1 = yeast;
+
+    /**
+     * Compiles a querystring
+     * Returns string representation of the object
+     *
+     * @param {Object}
+     * @api private
+     */
+    var encode = function (obj) {
+      var str = '';
+
+      for (var i in obj) {
+        if (obj.hasOwnProperty(i)) {
+          if (str.length) str += '&';
+          str += encodeURIComponent(i) + '=' + encodeURIComponent(obj[i]);
+        }
+      }
+
+      return str;
+    };
+
+    /**
+     * Parses a simple querystring into an object
+     *
+     * @param {String} qs
+     * @api private
+     */
+
+    var decode = function(qs){
+      var qry = {};
+      var pairs = qs.split('&');
+      for (var i = 0, l = pairs.length; i < l; i++) {
+        var pair = pairs[i].split('=');
+        qry[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+      }
+      return qry;
+    };
+
+    var parseqs = {
+    	encode: encode,
+    	decode: decode
+    };
+
+    class Polling extends Transport {
+        constructor() {
+            super(...arguments);
+            this.polling = false;
+        }
+        /**
+         * Transport name.
+         */
+        get name() {
+            return "polling";
+        }
+        /**
+         * Opens the socket (triggers polling). We write a PING message to determine
+         * when the transport is open.
+         *
+         * @api private
+         */
+        doOpen() {
+            this.poll();
+        }
+        /**
+         * Pauses polling.
+         *
+         * @param {Function} callback upon buffers are flushed and transport is paused
+         * @api private
+         */
+        pause(onPause) {
+            this.readyState = "pausing";
+            const pause = () => {
+                this.readyState = "paused";
+                onPause();
+            };
+            if (this.polling || !this.writable) {
+                let total = 0;
+                if (this.polling) {
+                    total++;
+                    this.once("pollComplete", function () {
+                        --total || pause();
+                    });
+                }
+                if (!this.writable) {
+                    total++;
+                    this.once("drain", function () {
+                        --total || pause();
+                    });
+                }
+            }
+            else {
+                pause();
+            }
+        }
+        /**
+         * Starts polling cycle.
+         *
+         * @api public
+         */
+        poll() {
+            this.polling = true;
+            this.doPoll();
+            this.emit("poll");
+        }
+        /**
+         * Overloads onData to detect payloads.
+         *
+         * @api private
+         */
+        onData(data) {
+            const callback = packet => {
+                // if its the first message we consider the transport open
+                if ("opening" === this.readyState && packet.type === "open") {
+                    this.onOpen();
+                }
+                // if its a close packet, we close the ongoing requests
+                if ("close" === packet.type) {
+                    this.onClose();
+                    return false;
+                }
+                // otherwise bypass onData and handle the message
+                this.onPacket(packet);
+            };
+            // decode payload
+            decodePayload(data, this.socket.binaryType).forEach(callback);
+            // if an event did not trigger closing
+            if ("closed" !== this.readyState) {
+                // if we got data we're not polling
+                this.polling = false;
+                this.emit("pollComplete");
+                if ("open" === this.readyState) {
+                    this.poll();
+                }
+            }
+        }
+        /**
+         * For polling, send a close packet.
+         *
+         * @api private
+         */
+        doClose() {
+            const close = () => {
+                this.write([{ type: "close" }]);
+            };
+            if ("open" === this.readyState) {
+                close();
+            }
+            else {
+                // in case we're trying to close while
+                // handshaking is in progress (GH-164)
+                this.once("open", close);
+            }
+        }
+        /**
+         * Writes a packets payload.
+         *
+         * @param {Array} data packets
+         * @param {Function} drain callback
+         * @api private
+         */
+        write(packets) {
+            this.writable = false;
+            encodePayload(packets, data => {
+                this.doWrite(data, () => {
+                    this.writable = true;
+                    this.emit("drain");
+                });
+            });
+        }
+        /**
+         * Generates uri for connection.
+         *
+         * @api private
+         */
+        uri() {
+            let query = this.query || {};
+            const schema = this.opts.secure ? "https" : "http";
+            let port = "";
+            // cache busting is forced
+            if (false !== this.opts.timestampRequests) {
+                query[this.opts.timestampParam] = yeast_1();
+            }
+            if (!this.supportsBinary && !query.sid) {
+                query.b64 = 1;
+            }
+            // avoid port if default for schema
+            if (this.opts.port &&
+                (("https" === schema && Number(this.opts.port) !== 443) ||
+                    ("http" === schema && Number(this.opts.port) !== 80))) {
+                port = ":" + this.opts.port;
+            }
+            const encodedQuery = parseqs.encode(query);
+            const ipv6 = this.opts.hostname.indexOf(":") !== -1;
+            return (schema +
+                "://" +
+                (ipv6 ? "[" + this.opts.hostname + "]" : this.opts.hostname) +
+                port +
+                this.opts.path +
+                (encodedQuery.length ? "?" + encodedQuery : ""));
+        }
+    }
+
+    /* global attachEvent */
+    /**
+     * Empty function
+     */
+    function empty() { }
+    const hasXHR2 = (function () {
+        const xhr = new XMLHttpRequest$1({
+            xdomain: false
+        });
+        return null != xhr.responseType;
+    })();
+    class XHR extends Polling {
+        /**
+         * XHR Polling constructor.
+         *
+         * @param {Object} opts
+         * @api public
+         */
+        constructor(opts) {
+            super(opts);
+            if (typeof location !== "undefined") {
+                const isSSL = "https:" === location.protocol;
+                let port = location.port;
+                // some user agents have empty `location.port`
+                if (!port) {
+                    port = isSSL ? "443" : "80";
+                }
+                this.xd =
+                    (typeof location !== "undefined" &&
+                        opts.hostname !== location.hostname) ||
+                        port !== opts.port;
+                this.xs = opts.secure !== isSSL;
+            }
+            /**
+             * XHR supports binary
+             */
+            const forceBase64 = opts && opts.forceBase64;
+            this.supportsBinary = hasXHR2 && !forceBase64;
+        }
+        /**
+         * Creates a request.
+         *
+         * @param {String} method
+         * @api private
+         */
+        request(opts = {}) {
+            Object.assign(opts, { xd: this.xd, xs: this.xs }, this.opts);
+            return new Request(this.uri(), opts);
+        }
+        /**
+         * Sends data.
+         *
+         * @param {String} data to send.
+         * @param {Function} called upon flush.
+         * @api private
+         */
+        doWrite(data, fn) {
+            const req = this.request({
+                method: "POST",
+                data: data
+            });
+            req.on("success", fn);
+            req.on("error", err => {
+                this.onError("xhr post error", err);
+            });
+        }
+        /**
+         * Starts a poll cycle.
+         *
+         * @api private
+         */
+        doPoll() {
+            const req = this.request();
+            req.on("data", this.onData.bind(this));
+            req.on("error", err => {
+                this.onError("xhr poll error", err);
+            });
+            this.pollXhr = req;
+        }
+    }
+    class Request extends Emitter_1 {
+        /**
+         * Request constructor
+         *
+         * @param {Object} options
+         * @api public
+         */
+        constructor(uri, opts) {
+            super();
+            installTimerFunctions(this, opts);
+            this.opts = opts;
+            this.method = opts.method || "GET";
+            this.uri = uri;
+            this.async = false !== opts.async;
+            this.data = undefined !== opts.data ? opts.data : null;
+            this.create();
+        }
+        /**
+         * Creates the XHR object and sends the request.
+         *
+         * @api private
+         */
+        create() {
+            const opts = pick(this.opts, "agent", "pfx", "key", "passphrase", "cert", "ca", "ciphers", "rejectUnauthorized", "autoUnref");
+            opts.xdomain = !!this.opts.xd;
+            opts.xscheme = !!this.opts.xs;
+            const xhr = (this.xhr = new XMLHttpRequest$1(opts));
+            try {
+                xhr.open(this.method, this.uri, this.async);
+                try {
+                    if (this.opts.extraHeaders) {
+                        xhr.setDisableHeaderCheck && xhr.setDisableHeaderCheck(true);
+                        for (let i in this.opts.extraHeaders) {
+                            if (this.opts.extraHeaders.hasOwnProperty(i)) {
+                                xhr.setRequestHeader(i, this.opts.extraHeaders[i]);
+                            }
+                        }
+                    }
+                }
+                catch (e) { }
+                if ("POST" === this.method) {
+                    try {
+                        xhr.setRequestHeader("Content-type", "text/plain;charset=UTF-8");
+                    }
+                    catch (e) { }
+                }
+                try {
+                    xhr.setRequestHeader("Accept", "*/*");
+                }
+                catch (e) { }
+                // ie6 check
+                if ("withCredentials" in xhr) {
+                    xhr.withCredentials = this.opts.withCredentials;
+                }
+                if (this.opts.requestTimeout) {
+                    xhr.timeout = this.opts.requestTimeout;
+                }
+                xhr.onreadystatechange = () => {
+                    if (4 !== xhr.readyState)
+                        return;
+                    if (200 === xhr.status || 1223 === xhr.status) {
+                        this.onLoad();
+                    }
+                    else {
+                        // make sure the `error` event handler that's user-set
+                        // does not throw in the same tick and gets caught here
+                        this.setTimeoutFn(() => {
+                            this.onError(typeof xhr.status === "number" ? xhr.status : 0);
+                        }, 0);
+                    }
+                };
+                xhr.send(this.data);
+            }
+            catch (e) {
+                // Need to defer since .create() is called directly from the constructor
+                // and thus the 'error' event can only be only bound *after* this exception
+                // occurs.  Therefore, also, we cannot throw here at all.
+                this.setTimeoutFn(() => {
+                    this.onError(e);
+                }, 0);
+                return;
+            }
+            if (typeof document !== "undefined") {
+                this.index = Request.requestsCount++;
+                Request.requests[this.index] = this;
+            }
+        }
+        /**
+         * Called upon successful response.
+         *
+         * @api private
+         */
+        onSuccess() {
+            this.emit("success");
+            this.cleanup();
+        }
+        /**
+         * Called if we have data.
+         *
+         * @api private
+         */
+        onData(data) {
+            this.emit("data", data);
+            this.onSuccess();
+        }
+        /**
+         * Called upon error.
+         *
+         * @api private
+         */
+        onError(err) {
+            this.emit("error", err);
+            this.cleanup(true);
+        }
+        /**
+         * Cleans up house.
+         *
+         * @api private
+         */
+        cleanup(fromError) {
+            if ("undefined" === typeof this.xhr || null === this.xhr) {
+                return;
+            }
+            this.xhr.onreadystatechange = empty;
+            if (fromError) {
+                try {
+                    this.xhr.abort();
+                }
+                catch (e) { }
+            }
+            if (typeof document !== "undefined") {
+                delete Request.requests[this.index];
+            }
+            this.xhr = null;
+        }
+        /**
+         * Called upon load.
+         *
+         * @api private
+         */
+        onLoad() {
+            const data = this.xhr.responseText;
+            if (data !== null) {
+                this.onData(data);
+            }
+        }
+        /**
+         * Aborts the request.
+         *
+         * @api public
+         */
+        abort() {
+            this.cleanup();
+        }
+    }
+    Request.requestsCount = 0;
+    Request.requests = {};
+    /**
+     * Aborts pending requests when unloading the window. This is needed to prevent
+     * memory leaks (e.g. when using IE) and to ensure that no spurious error is
+     * emitted.
+     */
+    if (typeof document !== "undefined") {
+        // @ts-ignore
+        if (typeof attachEvent === "function") {
+            // @ts-ignore
+            attachEvent("onunload", unloadHandler);
+        }
+        else if (typeof addEventListener === "function") {
+            const terminationEvent = "onpagehide" in globalThis$1 ? "pagehide" : "unload";
+            addEventListener(terminationEvent, unloadHandler, false);
+        }
+    }
+    function unloadHandler() {
+        for (let i in Request.requests) {
+            if (Request.requests.hasOwnProperty(i)) {
+                Request.requests[i].abort();
+            }
+        }
+    }
+
+    const nextTick = (() => {
+        const isPromiseAvailable = typeof Promise === "function" && typeof Promise.resolve === "function";
+        if (isPromiseAvailable) {
+            return cb => Promise.resolve().then(cb);
+        }
+        else {
+            return (cb, setTimeoutFn) => setTimeoutFn(cb, 0);
+        }
+    })();
+    const WebSocket = globalThis$1.WebSocket || globalThis$1.MozWebSocket;
+    const usingBrowserWebSocket = true;
+    const defaultBinaryType = "arraybuffer";
+
+    // detect ReactNative environment
+    const isReactNative = typeof navigator !== "undefined" &&
+        typeof navigator.product === "string" &&
+        navigator.product.toLowerCase() === "reactnative";
+    class WS extends Transport {
+        /**
+         * WebSocket transport constructor.
+         *
+         * @api {Object} connection options
+         * @api public
+         */
+        constructor(opts) {
+            super(opts);
+            this.supportsBinary = !opts.forceBase64;
+        }
+        /**
+         * Transport name.
+         *
+         * @api public
+         */
+        get name() {
+            return "websocket";
+        }
+        /**
+         * Opens socket.
+         *
+         * @api private
+         */
+        doOpen() {
+            if (!this.check()) {
+                // let probe timeout
+                return;
+            }
+            const uri = this.uri();
+            const protocols = this.opts.protocols;
+            // React Native only supports the 'headers' option, and will print a warning if anything else is passed
+            const opts = isReactNative
+                ? {}
+                : pick(this.opts, "agent", "perMessageDeflate", "pfx", "key", "passphrase", "cert", "ca", "ciphers", "rejectUnauthorized", "localAddress", "protocolVersion", "origin", "maxPayload", "family", "checkServerIdentity");
+            if (this.opts.extraHeaders) {
+                opts.headers = this.opts.extraHeaders;
+            }
+            try {
+                this.ws =
+                    usingBrowserWebSocket && !isReactNative
+                        ? protocols
+                            ? new WebSocket(uri, protocols)
+                            : new WebSocket(uri)
+                        : new WebSocket(uri, protocols, opts);
+            }
+            catch (err) {
+                return this.emit("error", err);
+            }
+            this.ws.binaryType = this.socket.binaryType || defaultBinaryType;
+            this.addEventListeners();
+        }
+        /**
+         * Adds event listeners to the socket
+         *
+         * @api private
+         */
+        addEventListeners() {
+            this.ws.onopen = () => {
+                if (this.opts.autoUnref) {
+                    this.ws._socket.unref();
+                }
+                this.onOpen();
+            };
+            this.ws.onclose = this.onClose.bind(this);
+            this.ws.onmessage = ev => this.onData(ev.data);
+            this.ws.onerror = e => this.onError("websocket error", e);
+        }
+        /**
+         * Writes data to socket.
+         *
+         * @param {Array} array of packets.
+         * @api private
+         */
+        write(packets) {
+            this.writable = false;
+            // encodePacket efficient as it uses WS framing
+            // no need for encodePayload
+            for (let i = 0; i < packets.length; i++) {
+                const packet = packets[i];
+                const lastPacket = i === packets.length - 1;
+                encodePacket(packet, this.supportsBinary, data => {
+                    // always create a new object (GH-437)
+                    const opts = {};
+                    // Sometimes the websocket has already been closed but the browser didn't
+                    // have a chance of informing us about it yet, in that case send will
+                    // throw an error
+                    try {
+                        if (usingBrowserWebSocket) {
+                            // TypeError is thrown when passing the second argument on Safari
+                            this.ws.send(data);
+                        }
+                    }
+                    catch (e) {
+                    }
+                    if (lastPacket) {
+                        // fake drain
+                        // defer to next tick to allow Socket to clear writeBuffer
+                        nextTick(() => {
+                            this.writable = true;
+                            this.emit("drain");
+                        }, this.setTimeoutFn);
+                    }
+                });
+            }
+        }
+        /**
+         * Closes socket.
+         *
+         * @api private
+         */
+        doClose() {
+            if (typeof this.ws !== "undefined") {
+                this.ws.close();
+                this.ws = null;
+            }
+        }
+        /**
+         * Generates uri for connection.
+         *
+         * @api private
+         */
+        uri() {
+            let query = this.query || {};
+            const schema = this.opts.secure ? "wss" : "ws";
+            let port = "";
+            // avoid port if default for schema
+            if (this.opts.port &&
+                (("wss" === schema && Number(this.opts.port) !== 443) ||
+                    ("ws" === schema && Number(this.opts.port) !== 80))) {
+                port = ":" + this.opts.port;
+            }
+            // append timestamp to URI
+            if (this.opts.timestampRequests) {
+                query[this.opts.timestampParam] = yeast_1();
+            }
+            // communicate binary support capabilities
+            if (!this.supportsBinary) {
+                query.b64 = 1;
+            }
+            const encodedQuery = parseqs.encode(query);
+            const ipv6 = this.opts.hostname.indexOf(":") !== -1;
+            return (schema +
+                "://" +
+                (ipv6 ? "[" + this.opts.hostname + "]" : this.opts.hostname) +
+                port +
+                this.opts.path +
+                (encodedQuery.length ? "?" + encodedQuery : ""));
+        }
+        /**
+         * Feature detection for WebSocket.
+         *
+         * @return {Boolean} whether this transport is available.
+         * @api public
+         */
+        check() {
+            return (!!WebSocket &&
+                !("__initialize" in WebSocket && this.name === WS.prototype.name));
+        }
+    }
+
+    const transports = {
+        websocket: WS,
+        polling: XHR
+    };
+
+    class Socket$1 extends Emitter_1 {
+        /**
+         * Socket constructor.
+         *
+         * @param {String|Object} uri or options
+         * @param {Object} opts - options
+         * @api public
+         */
+        constructor(uri, opts = {}) {
+            super();
+            if (uri && "object" === typeof uri) {
+                opts = uri;
+                uri = null;
+            }
+            if (uri) {
+                uri = parseuri(uri);
+                opts.hostname = uri.host;
+                opts.secure = uri.protocol === "https" || uri.protocol === "wss";
+                opts.port = uri.port;
+                if (uri.query)
+                    opts.query = uri.query;
+            }
+            else if (opts.host) {
+                opts.hostname = parseuri(opts.host).host;
+            }
+            installTimerFunctions(this, opts);
+            this.secure =
+                null != opts.secure
+                    ? opts.secure
+                    : typeof location !== "undefined" && "https:" === location.protocol;
+            if (opts.hostname && !opts.port) {
+                // if no port is specified manually, use the protocol default
+                opts.port = this.secure ? "443" : "80";
+            }
+            this.hostname =
+                opts.hostname ||
+                    (typeof location !== "undefined" ? location.hostname : "localhost");
+            this.port =
+                opts.port ||
+                    (typeof location !== "undefined" && location.port
+                        ? location.port
+                        : this.secure
+                            ? "443"
+                            : "80");
+            this.transports = opts.transports || ["polling", "websocket"];
+            this.readyState = "";
+            this.writeBuffer = [];
+            this.prevBufferLen = 0;
+            this.opts = Object.assign({
+                path: "/engine.io",
+                agent: false,
+                withCredentials: false,
+                upgrade: true,
+                timestampParam: "t",
+                rememberUpgrade: false,
+                rejectUnauthorized: true,
+                perMessageDeflate: {
+                    threshold: 1024
+                },
+                transportOptions: {},
+                closeOnBeforeunload: true
+            }, opts);
+            this.opts.path = this.opts.path.replace(/\/$/, "") + "/";
+            if (typeof this.opts.query === "string") {
+                this.opts.query = parseqs.decode(this.opts.query);
+            }
+            // set on handshake
+            this.id = null;
+            this.upgrades = null;
+            this.pingInterval = null;
+            this.pingTimeout = null;
+            // set on heartbeat
+            this.pingTimeoutTimer = null;
+            if (typeof addEventListener === "function") {
+                if (this.opts.closeOnBeforeunload) {
+                    // Firefox closes the connection when the "beforeunload" event is emitted but not Chrome. This event listener
+                    // ensures every browser behaves the same (no "disconnect" event at the Socket.IO level when the page is
+                    // closed/reloaded)
+                    addEventListener("beforeunload", () => {
+                        if (this.transport) {
+                            // silently close the transport
+                            this.transport.removeAllListeners();
+                            this.transport.close();
+                        }
+                    }, false);
+                }
+                if (this.hostname !== "localhost") {
+                    this.offlineEventListener = () => {
+                        this.onClose("transport close");
+                    };
+                    addEventListener("offline", this.offlineEventListener, false);
+                }
+            }
+            this.open();
+        }
+        /**
+         * Creates transport of the given type.
+         *
+         * @param {String} transport name
+         * @return {Transport}
+         * @api private
+         */
+        createTransport(name) {
+            const query = clone(this.opts.query);
+            // append engine.io protocol identifier
+            query.EIO = protocol$1;
+            // transport name
+            query.transport = name;
+            // session id if we already have one
+            if (this.id)
+                query.sid = this.id;
+            const opts = Object.assign({}, this.opts.transportOptions[name], this.opts, {
+                query,
+                socket: this,
+                hostname: this.hostname,
+                secure: this.secure,
+                port: this.port
+            });
+            return new transports[name](opts);
+        }
+        /**
+         * Initializes transport to use and starts probe.
+         *
+         * @api private
+         */
+        open() {
+            let transport;
+            if (this.opts.rememberUpgrade &&
+                Socket$1.priorWebsocketSuccess &&
+                this.transports.indexOf("websocket") !== -1) {
+                transport = "websocket";
+            }
+            else if (0 === this.transports.length) {
+                // Emit error on next tick so it can be listened to
+                this.setTimeoutFn(() => {
+                    this.emitReserved("error", "No transports available");
+                }, 0);
+                return;
+            }
+            else {
+                transport = this.transports[0];
+            }
+            this.readyState = "opening";
+            // Retry with the next transport if the transport is disabled (jsonp: false)
+            try {
+                transport = this.createTransport(transport);
+            }
+            catch (e) {
+                this.transports.shift();
+                this.open();
+                return;
+            }
+            transport.open();
+            this.setTransport(transport);
+        }
+        /**
+         * Sets the current transport. Disables the existing one (if any).
+         *
+         * @api private
+         */
+        setTransport(transport) {
+            if (this.transport) {
+                this.transport.removeAllListeners();
+            }
+            // set up transport
+            this.transport = transport;
+            // set up transport listeners
+            transport
+                .on("drain", this.onDrain.bind(this))
+                .on("packet", this.onPacket.bind(this))
+                .on("error", this.onError.bind(this))
+                .on("close", () => {
+                this.onClose("transport close");
+            });
+        }
+        /**
+         * Probes a transport.
+         *
+         * @param {String} transport name
+         * @api private
+         */
+        probe(name) {
+            let transport = this.createTransport(name);
+            let failed = false;
+            Socket$1.priorWebsocketSuccess = false;
+            const onTransportOpen = () => {
+                if (failed)
+                    return;
+                transport.send([{ type: "ping", data: "probe" }]);
+                transport.once("packet", msg => {
+                    if (failed)
+                        return;
+                    if ("pong" === msg.type && "probe" === msg.data) {
+                        this.upgrading = true;
+                        this.emitReserved("upgrading", transport);
+                        if (!transport)
+                            return;
+                        Socket$1.priorWebsocketSuccess = "websocket" === transport.name;
+                        this.transport.pause(() => {
+                            if (failed)
+                                return;
+                            if ("closed" === this.readyState)
+                                return;
+                            cleanup();
+                            this.setTransport(transport);
+                            transport.send([{ type: "upgrade" }]);
+                            this.emitReserved("upgrade", transport);
+                            transport = null;
+                            this.upgrading = false;
+                            this.flush();
+                        });
+                    }
+                    else {
+                        const err = new Error("probe error");
+                        // @ts-ignore
+                        err.transport = transport.name;
+                        this.emitReserved("upgradeError", err);
+                    }
+                });
+            };
+            function freezeTransport() {
+                if (failed)
+                    return;
+                // Any callback called by transport should be ignored since now
+                failed = true;
+                cleanup();
+                transport.close();
+                transport = null;
+            }
+            // Handle any error that happens while probing
+            const onerror = err => {
+                const error = new Error("probe error: " + err);
+                // @ts-ignore
+                error.transport = transport.name;
+                freezeTransport();
+                this.emitReserved("upgradeError", error);
+            };
+            function onTransportClose() {
+                onerror("transport closed");
+            }
+            // When the socket is closed while we're probing
+            function onclose() {
+                onerror("socket closed");
+            }
+            // When the socket is upgraded while we're probing
+            function onupgrade(to) {
+                if (transport && to.name !== transport.name) {
+                    freezeTransport();
+                }
+            }
+            // Remove all listeners on the transport and on self
+            const cleanup = () => {
+                transport.removeListener("open", onTransportOpen);
+                transport.removeListener("error", onerror);
+                transport.removeListener("close", onTransportClose);
+                this.off("close", onclose);
+                this.off("upgrading", onupgrade);
+            };
+            transport.once("open", onTransportOpen);
+            transport.once("error", onerror);
+            transport.once("close", onTransportClose);
+            this.once("close", onclose);
+            this.once("upgrading", onupgrade);
+            transport.open();
+        }
+        /**
+         * Called when connection is deemed open.
+         *
+         * @api private
+         */
+        onOpen() {
+            this.readyState = "open";
+            Socket$1.priorWebsocketSuccess = "websocket" === this.transport.name;
+            this.emitReserved("open");
+            this.flush();
+            // we check for `readyState` in case an `open`
+            // listener already closed the socket
+            if ("open" === this.readyState &&
+                this.opts.upgrade &&
+                this.transport.pause) {
+                let i = 0;
+                const l = this.upgrades.length;
+                for (; i < l; i++) {
+                    this.probe(this.upgrades[i]);
+                }
+            }
+        }
+        /**
+         * Handles a packet.
+         *
+         * @api private
+         */
+        onPacket(packet) {
+            if ("opening" === this.readyState ||
+                "open" === this.readyState ||
+                "closing" === this.readyState) {
+                this.emitReserved("packet", packet);
+                // Socket is live - any packet counts
+                this.emitReserved("heartbeat");
+                switch (packet.type) {
+                    case "open":
+                        this.onHandshake(JSON.parse(packet.data));
+                        break;
+                    case "ping":
+                        this.resetPingTimeout();
+                        this.sendPacket("pong");
+                        this.emitReserved("ping");
+                        this.emitReserved("pong");
+                        break;
+                    case "error":
+                        const err = new Error("server error");
+                        // @ts-ignore
+                        err.code = packet.data;
+                        this.onError(err);
+                        break;
+                    case "message":
+                        this.emitReserved("data", packet.data);
+                        this.emitReserved("message", packet.data);
+                        break;
+                }
+            }
+        }
+        /**
+         * Called upon handshake completion.
+         *
+         * @param {Object} data - handshake obj
+         * @api private
+         */
+        onHandshake(data) {
+            this.emitReserved("handshake", data);
+            this.id = data.sid;
+            this.transport.query.sid = data.sid;
+            this.upgrades = this.filterUpgrades(data.upgrades);
+            this.pingInterval = data.pingInterval;
+            this.pingTimeout = data.pingTimeout;
+            this.onOpen();
+            // In case open handler closes socket
+            if ("closed" === this.readyState)
+                return;
+            this.resetPingTimeout();
+        }
+        /**
+         * Sets and resets ping timeout timer based on server pings.
+         *
+         * @api private
+         */
+        resetPingTimeout() {
+            this.clearTimeoutFn(this.pingTimeoutTimer);
+            this.pingTimeoutTimer = this.setTimeoutFn(() => {
+                this.onClose("ping timeout");
+            }, this.pingInterval + this.pingTimeout);
+            if (this.opts.autoUnref) {
+                this.pingTimeoutTimer.unref();
+            }
+        }
+        /**
+         * Called on `drain` event
+         *
+         * @api private
+         */
+        onDrain() {
+            this.writeBuffer.splice(0, this.prevBufferLen);
+            // setting prevBufferLen = 0 is very important
+            // for example, when upgrading, upgrade packet is sent over,
+            // and a nonzero prevBufferLen could cause problems on `drain`
+            this.prevBufferLen = 0;
+            if (0 === this.writeBuffer.length) {
+                this.emitReserved("drain");
+            }
+            else {
+                this.flush();
+            }
+        }
+        /**
+         * Flush write buffers.
+         *
+         * @api private
+         */
+        flush() {
+            if ("closed" !== this.readyState &&
+                this.transport.writable &&
+                !this.upgrading &&
+                this.writeBuffer.length) {
+                this.transport.send(this.writeBuffer);
+                // keep track of current length of writeBuffer
+                // splice writeBuffer and callbackBuffer on `drain`
+                this.prevBufferLen = this.writeBuffer.length;
+                this.emitReserved("flush");
+            }
+        }
+        /**
+         * Sends a message.
+         *
+         * @param {String} message.
+         * @param {Function} callback function.
+         * @param {Object} options.
+         * @return {Socket} for chaining.
+         * @api public
+         */
+        write(msg, options, fn) {
+            this.sendPacket("message", msg, options, fn);
+            return this;
+        }
+        send(msg, options, fn) {
+            this.sendPacket("message", msg, options, fn);
+            return this;
+        }
+        /**
+         * Sends a packet.
+         *
+         * @param {String} packet type.
+         * @param {String} data.
+         * @param {Object} options.
+         * @param {Function} callback function.
+         * @api private
+         */
+        sendPacket(type, data, options, fn) {
+            if ("function" === typeof data) {
+                fn = data;
+                data = undefined;
+            }
+            if ("function" === typeof options) {
+                fn = options;
+                options = null;
+            }
+            if ("closing" === this.readyState || "closed" === this.readyState) {
+                return;
+            }
+            options = options || {};
+            options.compress = false !== options.compress;
+            const packet = {
+                type: type,
+                data: data,
+                options: options
+            };
+            this.emitReserved("packetCreate", packet);
+            this.writeBuffer.push(packet);
+            if (fn)
+                this.once("flush", fn);
+            this.flush();
+        }
+        /**
+         * Closes the connection.
+         *
+         * @api public
+         */
+        close() {
+            const close = () => {
+                this.onClose("forced close");
+                this.transport.close();
+            };
+            const cleanupAndClose = () => {
+                this.off("upgrade", cleanupAndClose);
+                this.off("upgradeError", cleanupAndClose);
+                close();
+            };
+            const waitForUpgrade = () => {
+                // wait for upgrade to finish since we can't send packets while pausing a transport
+                this.once("upgrade", cleanupAndClose);
+                this.once("upgradeError", cleanupAndClose);
+            };
+            if ("opening" === this.readyState || "open" === this.readyState) {
+                this.readyState = "closing";
+                if (this.writeBuffer.length) {
+                    this.once("drain", () => {
+                        if (this.upgrading) {
+                            waitForUpgrade();
+                        }
+                        else {
+                            close();
+                        }
+                    });
+                }
+                else if (this.upgrading) {
+                    waitForUpgrade();
+                }
+                else {
+                    close();
+                }
+            }
+            return this;
+        }
+        /**
+         * Called upon transport error
+         *
+         * @api private
+         */
+        onError(err) {
+            Socket$1.priorWebsocketSuccess = false;
+            this.emitReserved("error", err);
+            this.onClose("transport error", err);
+        }
+        /**
+         * Called upon transport close.
+         *
+         * @api private
+         */
+        onClose(reason, desc) {
+            if ("opening" === this.readyState ||
+                "open" === this.readyState ||
+                "closing" === this.readyState) {
+                // clear timers
+                this.clearTimeoutFn(this.pingTimeoutTimer);
+                // stop event from firing again for transport
+                this.transport.removeAllListeners("close");
+                // ensure transport won't stay open
+                this.transport.close();
+                // ignore further transport communication
+                this.transport.removeAllListeners();
+                if (typeof removeEventListener === "function") {
+                    removeEventListener("offline", this.offlineEventListener, false);
+                }
+                // set ready state
+                this.readyState = "closed";
+                // clear session id
+                this.id = null;
+                // emit close event
+                this.emitReserved("close", reason, desc);
+                // clean buffers after, so users can still
+                // grab the buffers on `close` event
+                this.writeBuffer = [];
+                this.prevBufferLen = 0;
+            }
+        }
+        /**
+         * Filters upgrades, returning only those matching client transports.
+         *
+         * @param {Array} server upgrades
+         * @api private
+         *
+         */
+        filterUpgrades(upgrades) {
+            const filteredUpgrades = [];
+            let i = 0;
+            const j = upgrades.length;
+            for (; i < j; i++) {
+                if (~this.transports.indexOf(upgrades[i]))
+                    filteredUpgrades.push(upgrades[i]);
+            }
+            return filteredUpgrades;
+        }
+    }
+    Socket$1.protocol = protocol$1;
+    function clone(obj) {
+        const o = {};
+        for (let i in obj) {
+            if (obj.hasOwnProperty(i)) {
+                o[i] = obj[i];
+            }
+        }
+        return o;
+    }
+
+    const withNativeArrayBuffer = typeof ArrayBuffer === "function";
+    const isView = (obj) => {
+        return typeof ArrayBuffer.isView === "function"
+            ? ArrayBuffer.isView(obj)
+            : obj.buffer instanceof ArrayBuffer;
+    };
+    const toString = Object.prototype.toString;
+    const withNativeBlob = typeof Blob === "function" ||
+        (typeof Blob !== "undefined" &&
+            toString.call(Blob) === "[object BlobConstructor]");
+    const withNativeFile = typeof File === "function" ||
+        (typeof File !== "undefined" &&
+            toString.call(File) === "[object FileConstructor]");
+    /**
+     * Returns true if obj is a Buffer, an ArrayBuffer, a Blob or a File.
+     *
+     * @private
+     */
+    function isBinary(obj) {
+        return ((withNativeArrayBuffer && (obj instanceof ArrayBuffer || isView(obj))) ||
+            (withNativeBlob && obj instanceof Blob) ||
+            (withNativeFile && obj instanceof File));
+    }
+    function hasBinary(obj, toJSON) {
+        if (!obj || typeof obj !== "object") {
+            return false;
+        }
+        if (Array.isArray(obj)) {
+            for (let i = 0, l = obj.length; i < l; i++) {
+                if (hasBinary(obj[i])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (isBinary(obj)) {
+            return true;
+        }
+        if (obj.toJSON &&
+            typeof obj.toJSON === "function" &&
+            arguments.length === 1) {
+            return hasBinary(obj.toJSON(), true);
+        }
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key) && hasBinary(obj[key])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Replaces every Buffer | ArrayBuffer | Blob | File in packet with a numbered placeholder.
+     *
+     * @param {Object} packet - socket.io event packet
+     * @return {Object} with deconstructed packet and list of buffers
+     * @public
+     */
+    function deconstructPacket(packet) {
+        const buffers = [];
+        const packetData = packet.data;
+        const pack = packet;
+        pack.data = _deconstructPacket(packetData, buffers);
+        pack.attachments = buffers.length; // number of binary 'attachments'
+        return { packet: pack, buffers: buffers };
+    }
+    function _deconstructPacket(data, buffers) {
+        if (!data)
+            return data;
+        if (isBinary(data)) {
+            const placeholder = { _placeholder: true, num: buffers.length };
+            buffers.push(data);
+            return placeholder;
+        }
+        else if (Array.isArray(data)) {
+            const newData = new Array(data.length);
+            for (let i = 0; i < data.length; i++) {
+                newData[i] = _deconstructPacket(data[i], buffers);
+            }
+            return newData;
+        }
+        else if (typeof data === "object" && !(data instanceof Date)) {
+            const newData = {};
+            for (const key in data) {
+                if (data.hasOwnProperty(key)) {
+                    newData[key] = _deconstructPacket(data[key], buffers);
+                }
+            }
+            return newData;
+        }
+        return data;
+    }
+    /**
+     * Reconstructs a binary packet from its placeholder packet and buffers
+     *
+     * @param {Object} packet - event packet with placeholders
+     * @param {Array} buffers - binary buffers to put in placeholder positions
+     * @return {Object} reconstructed packet
+     * @public
+     */
+    function reconstructPacket(packet, buffers) {
+        packet.data = _reconstructPacket(packet.data, buffers);
+        packet.attachments = undefined; // no longer useful
+        return packet;
+    }
+    function _reconstructPacket(data, buffers) {
+        if (!data)
+            return data;
+        if (data && data._placeholder) {
+            return buffers[data.num]; // appropriate buffer (should be natural order anyway)
+        }
+        else if (Array.isArray(data)) {
+            for (let i = 0; i < data.length; i++) {
+                data[i] = _reconstructPacket(data[i], buffers);
+            }
+        }
+        else if (typeof data === "object") {
+            for (const key in data) {
+                if (data.hasOwnProperty(key)) {
+                    data[key] = _reconstructPacket(data[key], buffers);
+                }
+            }
+        }
+        return data;
+    }
+
+    /**
+     * Protocol version.
+     *
+     * @public
+     */
+    const protocol = 5;
+    var PacketType;
+    (function (PacketType) {
+        PacketType[PacketType["CONNECT"] = 0] = "CONNECT";
+        PacketType[PacketType["DISCONNECT"] = 1] = "DISCONNECT";
+        PacketType[PacketType["EVENT"] = 2] = "EVENT";
+        PacketType[PacketType["ACK"] = 3] = "ACK";
+        PacketType[PacketType["CONNECT_ERROR"] = 4] = "CONNECT_ERROR";
+        PacketType[PacketType["BINARY_EVENT"] = 5] = "BINARY_EVENT";
+        PacketType[PacketType["BINARY_ACK"] = 6] = "BINARY_ACK";
+    })(PacketType || (PacketType = {}));
+    /**
+     * A socket.io Encoder instance
+     */
+    class Encoder {
+        /**
+         * Encode a packet as a single string if non-binary, or as a
+         * buffer sequence, depending on packet type.
+         *
+         * @param {Object} obj - packet object
+         */
+        encode(obj) {
+            if (obj.type === PacketType.EVENT || obj.type === PacketType.ACK) {
+                if (hasBinary(obj)) {
+                    obj.type =
+                        obj.type === PacketType.EVENT
+                            ? PacketType.BINARY_EVENT
+                            : PacketType.BINARY_ACK;
+                    return this.encodeAsBinary(obj);
+                }
+            }
+            return [this.encodeAsString(obj)];
+        }
+        /**
+         * Encode packet as string.
+         */
+        encodeAsString(obj) {
+            // first is type
+            let str = "" + obj.type;
+            // attachments if we have them
+            if (obj.type === PacketType.BINARY_EVENT ||
+                obj.type === PacketType.BINARY_ACK) {
+                str += obj.attachments + "-";
+            }
+            // if we have a namespace other than `/`
+            // we append it followed by a comma `,`
+            if (obj.nsp && "/" !== obj.nsp) {
+                str += obj.nsp + ",";
+            }
+            // immediately followed by the id
+            if (null != obj.id) {
+                str += obj.id;
+            }
+            // json data
+            if (null != obj.data) {
+                str += JSON.stringify(obj.data);
+            }
+            return str;
+        }
+        /**
+         * Encode packet as 'buffer sequence' by removing blobs, and
+         * deconstructing packet into object with placeholders and
+         * a list of buffers.
+         */
+        encodeAsBinary(obj) {
+            const deconstruction = deconstructPacket(obj);
+            const pack = this.encodeAsString(deconstruction.packet);
+            const buffers = deconstruction.buffers;
+            buffers.unshift(pack); // add packet info to beginning of data list
+            return buffers; // write all the buffers
+        }
+    }
+    /**
+     * A socket.io Decoder instance
+     *
+     * @return {Object} decoder
+     */
+    class Decoder extends Emitter_1 {
+        constructor() {
+            super();
+        }
+        /**
+         * Decodes an encoded packet string into packet JSON.
+         *
+         * @param {String} obj - encoded packet
+         */
+        add(obj) {
+            let packet;
+            if (typeof obj === "string") {
+                packet = this.decodeString(obj);
+                if (packet.type === PacketType.BINARY_EVENT ||
+                    packet.type === PacketType.BINARY_ACK) {
+                    // binary packet's json
+                    this.reconstructor = new BinaryReconstructor(packet);
+                    // no attachments, labeled binary but no binary data to follow
+                    if (packet.attachments === 0) {
+                        super.emitReserved("decoded", packet);
+                    }
+                }
+                else {
+                    // non-binary full packet
+                    super.emitReserved("decoded", packet);
+                }
+            }
+            else if (isBinary(obj) || obj.base64) {
+                // raw binary data
+                if (!this.reconstructor) {
+                    throw new Error("got binary data when not reconstructing a packet");
+                }
+                else {
+                    packet = this.reconstructor.takeBinaryData(obj);
+                    if (packet) {
+                        // received final buffer
+                        this.reconstructor = null;
+                        super.emitReserved("decoded", packet);
+                    }
+                }
+            }
+            else {
+                throw new Error("Unknown type: " + obj);
+            }
+        }
+        /**
+         * Decode a packet String (JSON data)
+         *
+         * @param {String} str
+         * @return {Object} packet
+         */
+        decodeString(str) {
+            let i = 0;
+            // look up type
+            const p = {
+                type: Number(str.charAt(0)),
+            };
+            if (PacketType[p.type] === undefined) {
+                throw new Error("unknown packet type " + p.type);
+            }
+            // look up attachments if type binary
+            if (p.type === PacketType.BINARY_EVENT ||
+                p.type === PacketType.BINARY_ACK) {
+                const start = i + 1;
+                while (str.charAt(++i) !== "-" && i != str.length) { }
+                const buf = str.substring(start, i);
+                if (buf != Number(buf) || str.charAt(i) !== "-") {
+                    throw new Error("Illegal attachments");
+                }
+                p.attachments = Number(buf);
+            }
+            // look up namespace (if any)
+            if ("/" === str.charAt(i + 1)) {
+                const start = i + 1;
+                while (++i) {
+                    const c = str.charAt(i);
+                    if ("," === c)
+                        break;
+                    if (i === str.length)
+                        break;
+                }
+                p.nsp = str.substring(start, i);
+            }
+            else {
+                p.nsp = "/";
+            }
+            // look up id
+            const next = str.charAt(i + 1);
+            if ("" !== next && Number(next) == next) {
+                const start = i + 1;
+                while (++i) {
+                    const c = str.charAt(i);
+                    if (null == c || Number(c) != c) {
+                        --i;
+                        break;
+                    }
+                    if (i === str.length)
+                        break;
+                }
+                p.id = Number(str.substring(start, i + 1));
+            }
+            // look up json data
+            if (str.charAt(++i)) {
+                const payload = tryParse(str.substr(i));
+                if (Decoder.isPayloadValid(p.type, payload)) {
+                    p.data = payload;
+                }
+                else {
+                    throw new Error("invalid payload");
+                }
+            }
+            return p;
+        }
+        static isPayloadValid(type, payload) {
+            switch (type) {
+                case PacketType.CONNECT:
+                    return typeof payload === "object";
+                case PacketType.DISCONNECT:
+                    return payload === undefined;
+                case PacketType.CONNECT_ERROR:
+                    return typeof payload === "string" || typeof payload === "object";
+                case PacketType.EVENT:
+                case PacketType.BINARY_EVENT:
+                    return Array.isArray(payload) && payload.length > 0;
+                case PacketType.ACK:
+                case PacketType.BINARY_ACK:
+                    return Array.isArray(payload);
+            }
+        }
+        /**
+         * Deallocates a parser's resources
+         */
+        destroy() {
+            if (this.reconstructor) {
+                this.reconstructor.finishedReconstruction();
+            }
+        }
+    }
+    function tryParse(str) {
+        try {
+            return JSON.parse(str);
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    /**
+     * A manager of a binary event's 'buffer sequence'. Should
+     * be constructed whenever a packet of type BINARY_EVENT is
+     * decoded.
+     *
+     * @param {Object} packet
+     * @return {BinaryReconstructor} initialized reconstructor
+     */
+    class BinaryReconstructor {
+        constructor(packet) {
+            this.packet = packet;
+            this.buffers = [];
+            this.reconPack = packet;
+        }
+        /**
+         * Method to be called when binary data received from connection
+         * after a BINARY_EVENT packet.
+         *
+         * @param {Buffer | ArrayBuffer} binData - the raw binary data received
+         * @return {null | Object} returns null if more binary data is expected or
+         *   a reconstructed packet object if all buffers have been received.
+         */
+        takeBinaryData(binData) {
+            this.buffers.push(binData);
+            if (this.buffers.length === this.reconPack.attachments) {
+                // done with buffer list
+                const packet = reconstructPacket(this.reconPack, this.buffers);
+                this.finishedReconstruction();
+                return packet;
+            }
+            return null;
+        }
+        /**
+         * Cleans up binary packet reconstruction variables.
+         */
+        finishedReconstruction() {
+            this.reconPack = null;
+            this.buffers = [];
+        }
+    }
+
+    var parser = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        protocol: protocol,
+        get PacketType () { return PacketType; },
+        Encoder: Encoder,
+        Decoder: Decoder
+    });
+
+    function on(obj, ev, fn) {
+        obj.on(ev, fn);
+        return function subDestroy() {
+            obj.off(ev, fn);
+        };
+    }
+
+    /**
+     * Internal events.
+     * These events can't be emitted by the user.
+     */
+    const RESERVED_EVENTS = Object.freeze({
+        connect: 1,
+        connect_error: 1,
+        disconnect: 1,
+        disconnecting: 1,
+        // EventEmitter reserved events: https://nodejs.org/api/events.html#events_event_newlistener
+        newListener: 1,
+        removeListener: 1,
+    });
+    class Socket extends Emitter_1 {
+        /**
+         * `Socket` constructor.
+         *
+         * @public
+         */
+        constructor(io, nsp, opts) {
+            super();
+            this.connected = false;
+            this.disconnected = true;
+            this.receiveBuffer = [];
+            this.sendBuffer = [];
+            this.ids = 0;
+            this.acks = {};
+            this.flags = {};
+            this.io = io;
+            this.nsp = nsp;
+            if (opts && opts.auth) {
+                this.auth = opts.auth;
+            }
+            if (this.io._autoConnect)
+                this.open();
+        }
+        /**
+         * Subscribe to open, close and packet events
+         *
+         * @private
+         */
+        subEvents() {
+            if (this.subs)
+                return;
+            const io = this.io;
+            this.subs = [
+                on(io, "open", this.onopen.bind(this)),
+                on(io, "packet", this.onpacket.bind(this)),
+                on(io, "error", this.onerror.bind(this)),
+                on(io, "close", this.onclose.bind(this)),
+            ];
+        }
+        /**
+         * Whether the Socket will try to reconnect when its Manager connects or reconnects
+         */
+        get active() {
+            return !!this.subs;
+        }
+        /**
+         * "Opens" the socket.
+         *
+         * @public
+         */
+        connect() {
+            if (this.connected)
+                return this;
+            this.subEvents();
+            if (!this.io["_reconnecting"])
+                this.io.open(); // ensure open
+            if ("open" === this.io._readyState)
+                this.onopen();
+            return this;
+        }
+        /**
+         * Alias for connect()
+         */
+        open() {
+            return this.connect();
+        }
+        /**
+         * Sends a `message` event.
+         *
+         * @return self
+         * @public
+         */
+        send(...args) {
+            args.unshift("message");
+            this.emit.apply(this, args);
+            return this;
+        }
+        /**
+         * Override `emit`.
+         * If the event is in `events`, it's emitted normally.
+         *
+         * @return self
+         * @public
+         */
+        emit(ev, ...args) {
+            if (RESERVED_EVENTS.hasOwnProperty(ev)) {
+                throw new Error('"' + ev + '" is a reserved event name');
+            }
+            args.unshift(ev);
+            const packet = {
+                type: PacketType.EVENT,
+                data: args,
+            };
+            packet.options = {};
+            packet.options.compress = this.flags.compress !== false;
+            // event ack callback
+            if ("function" === typeof args[args.length - 1]) {
+                this.acks[this.ids] = args.pop();
+                packet.id = this.ids++;
+            }
+            const isTransportWritable = this.io.engine &&
+                this.io.engine.transport &&
+                this.io.engine.transport.writable;
+            const discardPacket = this.flags.volatile && (!isTransportWritable || !this.connected);
+            if (discardPacket) ;
+            else if (this.connected) {
+                this.packet(packet);
+            }
+            else {
+                this.sendBuffer.push(packet);
+            }
+            this.flags = {};
+            return this;
+        }
+        /**
+         * Sends a packet.
+         *
+         * @param packet
+         * @private
+         */
+        packet(packet) {
+            packet.nsp = this.nsp;
+            this.io._packet(packet);
+        }
+        /**
+         * Called upon engine `open`.
+         *
+         * @private
+         */
+        onopen() {
+            if (typeof this.auth == "function") {
+                this.auth((data) => {
+                    this.packet({ type: PacketType.CONNECT, data });
+                });
+            }
+            else {
+                this.packet({ type: PacketType.CONNECT, data: this.auth });
+            }
+        }
+        /**
+         * Called upon engine or manager `error`.
+         *
+         * @param err
+         * @private
+         */
+        onerror(err) {
+            if (!this.connected) {
+                this.emitReserved("connect_error", err);
+            }
+        }
+        /**
+         * Called upon engine `close`.
+         *
+         * @param reason
+         * @private
+         */
+        onclose(reason) {
+            this.connected = false;
+            this.disconnected = true;
+            delete this.id;
+            this.emitReserved("disconnect", reason);
+        }
+        /**
+         * Called with socket packet.
+         *
+         * @param packet
+         * @private
+         */
+        onpacket(packet) {
+            const sameNamespace = packet.nsp === this.nsp;
+            if (!sameNamespace)
+                return;
+            switch (packet.type) {
+                case PacketType.CONNECT:
+                    if (packet.data && packet.data.sid) {
+                        const id = packet.data.sid;
+                        this.onconnect(id);
+                    }
+                    else {
+                        this.emitReserved("connect_error", new Error("It seems you are trying to reach a Socket.IO server in v2.x with a v3.x client, but they are not compatible (more information here: https://socket.io/docs/v3/migrating-from-2-x-to-3-0/)"));
+                    }
+                    break;
+                case PacketType.EVENT:
+                    this.onevent(packet);
+                    break;
+                case PacketType.BINARY_EVENT:
+                    this.onevent(packet);
+                    break;
+                case PacketType.ACK:
+                    this.onack(packet);
+                    break;
+                case PacketType.BINARY_ACK:
+                    this.onack(packet);
+                    break;
+                case PacketType.DISCONNECT:
+                    this.ondisconnect();
+                    break;
+                case PacketType.CONNECT_ERROR:
+                    const err = new Error(packet.data.message);
+                    // @ts-ignore
+                    err.data = packet.data.data;
+                    this.emitReserved("connect_error", err);
+                    break;
+            }
+        }
+        /**
+         * Called upon a server event.
+         *
+         * @param packet
+         * @private
+         */
+        onevent(packet) {
+            const args = packet.data || [];
+            if (null != packet.id) {
+                args.push(this.ack(packet.id));
+            }
+            if (this.connected) {
+                this.emitEvent(args);
+            }
+            else {
+                this.receiveBuffer.push(Object.freeze(args));
+            }
+        }
+        emitEvent(args) {
+            if (this._anyListeners && this._anyListeners.length) {
+                const listeners = this._anyListeners.slice();
+                for (const listener of listeners) {
+                    listener.apply(this, args);
+                }
+            }
+            super.emit.apply(this, args);
+        }
+        /**
+         * Produces an ack callback to emit with an event.
+         *
+         * @private
+         */
+        ack(id) {
+            const self = this;
+            let sent = false;
+            return function (...args) {
+                // prevent double callbacks
+                if (sent)
+                    return;
+                sent = true;
+                self.packet({
+                    type: PacketType.ACK,
+                    id: id,
+                    data: args,
+                });
+            };
+        }
+        /**
+         * Called upon a server acknowlegement.
+         *
+         * @param packet
+         * @private
+         */
+        onack(packet) {
+            const ack = this.acks[packet.id];
+            if ("function" === typeof ack) {
+                ack.apply(this, packet.data);
+                delete this.acks[packet.id];
+            }
+        }
+        /**
+         * Called upon server connect.
+         *
+         * @private
+         */
+        onconnect(id) {
+            this.id = id;
+            this.connected = true;
+            this.disconnected = false;
+            this.emitBuffered();
+            this.emitReserved("connect");
+        }
+        /**
+         * Emit buffered events (received and emitted).
+         *
+         * @private
+         */
+        emitBuffered() {
+            this.receiveBuffer.forEach((args) => this.emitEvent(args));
+            this.receiveBuffer = [];
+            this.sendBuffer.forEach((packet) => this.packet(packet));
+            this.sendBuffer = [];
+        }
+        /**
+         * Called upon server disconnect.
+         *
+         * @private
+         */
+        ondisconnect() {
+            this.destroy();
+            this.onclose("io server disconnect");
+        }
+        /**
+         * Called upon forced client/server side disconnections,
+         * this method ensures the manager stops tracking us and
+         * that reconnections don't get triggered for this.
+         *
+         * @private
+         */
+        destroy() {
+            if (this.subs) {
+                // clean subscriptions to avoid reconnections
+                this.subs.forEach((subDestroy) => subDestroy());
+                this.subs = undefined;
+            }
+            this.io["_destroy"](this);
+        }
+        /**
+         * Disconnects the socket manually.
+         *
+         * @return self
+         * @public
+         */
+        disconnect() {
+            if (this.connected) {
+                this.packet({ type: PacketType.DISCONNECT });
+            }
+            // remove socket from pool
+            this.destroy();
+            if (this.connected) {
+                // fire events
+                this.onclose("io client disconnect");
+            }
+            return this;
+        }
+        /**
+         * Alias for disconnect()
+         *
+         * @return self
+         * @public
+         */
+        close() {
+            return this.disconnect();
+        }
+        /**
+         * Sets the compress flag.
+         *
+         * @param compress - if `true`, compresses the sending data
+         * @return self
+         * @public
+         */
+        compress(compress) {
+            this.flags.compress = compress;
+            return this;
+        }
+        /**
+         * Sets a modifier for a subsequent event emission that the event message will be dropped when this socket is not
+         * ready to send messages.
+         *
+         * @returns self
+         * @public
+         */
+        get volatile() {
+            this.flags.volatile = true;
+            return this;
+        }
+        /**
+         * Adds a listener that will be fired when any event is emitted. The event name is passed as the first argument to the
+         * callback.
+         *
+         * @param listener
+         * @public
+         */
+        onAny(listener) {
+            this._anyListeners = this._anyListeners || [];
+            this._anyListeners.push(listener);
+            return this;
+        }
+        /**
+         * Adds a listener that will be fired when any event is emitted. The event name is passed as the first argument to the
+         * callback. The listener is added to the beginning of the listeners array.
+         *
+         * @param listener
+         * @public
+         */
+        prependAny(listener) {
+            this._anyListeners = this._anyListeners || [];
+            this._anyListeners.unshift(listener);
+            return this;
+        }
+        /**
+         * Removes the listener that will be fired when any event is emitted.
+         *
+         * @param listener
+         * @public
+         */
+        offAny(listener) {
+            if (!this._anyListeners) {
+                return this;
+            }
+            if (listener) {
+                const listeners = this._anyListeners;
+                for (let i = 0; i < listeners.length; i++) {
+                    if (listener === listeners[i]) {
+                        listeners.splice(i, 1);
+                        return this;
+                    }
+                }
+            }
+            else {
+                this._anyListeners = [];
+            }
+            return this;
+        }
+        /**
+         * Returns an array of listeners that are listening for any event that is specified. This array can be manipulated,
+         * e.g. to remove listeners.
+         *
+         * @public
+         */
+        listenersAny() {
+            return this._anyListeners || [];
+        }
+    }
+
+    /**
+     * Expose `Backoff`.
+     */
+
+    var backo2 = Backoff;
+
+    /**
+     * Initialize backoff timer with `opts`.
+     *
+     * - `min` initial timeout in milliseconds [100]
+     * - `max` max timeout [10000]
+     * - `jitter` [0]
+     * - `factor` [2]
+     *
+     * @param {Object} opts
+     * @api public
+     */
+
+    function Backoff(opts) {
+      opts = opts || {};
+      this.ms = opts.min || 100;
+      this.max = opts.max || 10000;
+      this.factor = opts.factor || 2;
+      this.jitter = opts.jitter > 0 && opts.jitter <= 1 ? opts.jitter : 0;
+      this.attempts = 0;
+    }
+
+    /**
+     * Return the backoff duration.
+     *
+     * @return {Number}
+     * @api public
+     */
+
+    Backoff.prototype.duration = function(){
+      var ms = this.ms * Math.pow(this.factor, this.attempts++);
+      if (this.jitter) {
+        var rand =  Math.random();
+        var deviation = Math.floor(rand * this.jitter * ms);
+        ms = (Math.floor(rand * 10) & 1) == 0  ? ms - deviation : ms + deviation;
+      }
+      return Math.min(ms, this.max) | 0;
+    };
+
+    /**
+     * Reset the number of attempts.
+     *
+     * @api public
+     */
+
+    Backoff.prototype.reset = function(){
+      this.attempts = 0;
+    };
+
+    /**
+     * Set the minimum duration
+     *
+     * @api public
+     */
+
+    Backoff.prototype.setMin = function(min){
+      this.ms = min;
+    };
+
+    /**
+     * Set the maximum duration
+     *
+     * @api public
+     */
+
+    Backoff.prototype.setMax = function(max){
+      this.max = max;
+    };
+
+    /**
+     * Set the jitter
+     *
+     * @api public
+     */
+
+    Backoff.prototype.setJitter = function(jitter){
+      this.jitter = jitter;
+    };
+
+    class Manager extends Emitter_1 {
+        constructor(uri, opts) {
+            var _a;
+            super();
+            this.nsps = {};
+            this.subs = [];
+            if (uri && "object" === typeof uri) {
+                opts = uri;
+                uri = undefined;
+            }
+            opts = opts || {};
+            opts.path = opts.path || "/socket.io";
+            this.opts = opts;
+            installTimerFunctions(this, opts);
+            this.reconnection(opts.reconnection !== false);
+            this.reconnectionAttempts(opts.reconnectionAttempts || Infinity);
+            this.reconnectionDelay(opts.reconnectionDelay || 1000);
+            this.reconnectionDelayMax(opts.reconnectionDelayMax || 5000);
+            this.randomizationFactor((_a = opts.randomizationFactor) !== null && _a !== void 0 ? _a : 0.5);
+            this.backoff = new backo2({
+                min: this.reconnectionDelay(),
+                max: this.reconnectionDelayMax(),
+                jitter: this.randomizationFactor(),
+            });
+            this.timeout(null == opts.timeout ? 20000 : opts.timeout);
+            this._readyState = "closed";
+            this.uri = uri;
+            const _parser = opts.parser || parser;
+            this.encoder = new _parser.Encoder();
+            this.decoder = new _parser.Decoder();
+            this._autoConnect = opts.autoConnect !== false;
+            if (this._autoConnect)
+                this.open();
+        }
+        reconnection(v) {
+            if (!arguments.length)
+                return this._reconnection;
+            this._reconnection = !!v;
+            return this;
+        }
+        reconnectionAttempts(v) {
+            if (v === undefined)
+                return this._reconnectionAttempts;
+            this._reconnectionAttempts = v;
+            return this;
+        }
+        reconnectionDelay(v) {
+            var _a;
+            if (v === undefined)
+                return this._reconnectionDelay;
+            this._reconnectionDelay = v;
+            (_a = this.backoff) === null || _a === void 0 ? void 0 : _a.setMin(v);
+            return this;
+        }
+        randomizationFactor(v) {
+            var _a;
+            if (v === undefined)
+                return this._randomizationFactor;
+            this._randomizationFactor = v;
+            (_a = this.backoff) === null || _a === void 0 ? void 0 : _a.setJitter(v);
+            return this;
+        }
+        reconnectionDelayMax(v) {
+            var _a;
+            if (v === undefined)
+                return this._reconnectionDelayMax;
+            this._reconnectionDelayMax = v;
+            (_a = this.backoff) === null || _a === void 0 ? void 0 : _a.setMax(v);
+            return this;
+        }
+        timeout(v) {
+            if (!arguments.length)
+                return this._timeout;
+            this._timeout = v;
+            return this;
+        }
+        /**
+         * Starts trying to reconnect if reconnection is enabled and we have not
+         * started reconnecting yet
+         *
+         * @private
+         */
+        maybeReconnectOnOpen() {
+            // Only try to reconnect if it's the first time we're connecting
+            if (!this._reconnecting &&
+                this._reconnection &&
+                this.backoff.attempts === 0) {
+                // keeps reconnection from firing twice for the same reconnection loop
+                this.reconnect();
+            }
+        }
+        /**
+         * Sets the current transport `socket`.
+         *
+         * @param {Function} fn - optional, callback
+         * @return self
+         * @public
+         */
+        open(fn) {
+            if (~this._readyState.indexOf("open"))
+                return this;
+            this.engine = new Socket$1(this.uri, this.opts);
+            const socket = this.engine;
+            const self = this;
+            this._readyState = "opening";
+            this.skipReconnect = false;
+            // emit `open`
+            const openSubDestroy = on(socket, "open", function () {
+                self.onopen();
+                fn && fn();
+            });
+            // emit `error`
+            const errorSub = on(socket, "error", (err) => {
+                self.cleanup();
+                self._readyState = "closed";
+                this.emitReserved("error", err);
+                if (fn) {
+                    fn(err);
+                }
+                else {
+                    // Only do this if there is no fn to handle the error
+                    self.maybeReconnectOnOpen();
+                }
+            });
+            if (false !== this._timeout) {
+                const timeout = this._timeout;
+                if (timeout === 0) {
+                    openSubDestroy(); // prevents a race condition with the 'open' event
+                }
+                // set timer
+                const timer = this.setTimeoutFn(() => {
+                    openSubDestroy();
+                    socket.close();
+                    // @ts-ignore
+                    socket.emit("error", new Error("timeout"));
+                }, timeout);
+                if (this.opts.autoUnref) {
+                    timer.unref();
+                }
+                this.subs.push(function subDestroy() {
+                    clearTimeout(timer);
+                });
+            }
+            this.subs.push(openSubDestroy);
+            this.subs.push(errorSub);
+            return this;
+        }
+        /**
+         * Alias for open()
+         *
+         * @return self
+         * @public
+         */
+        connect(fn) {
+            return this.open(fn);
+        }
+        /**
+         * Called upon transport open.
+         *
+         * @private
+         */
+        onopen() {
+            // clear old subs
+            this.cleanup();
+            // mark as open
+            this._readyState = "open";
+            this.emitReserved("open");
+            // add new subs
+            const socket = this.engine;
+            this.subs.push(on(socket, "ping", this.onping.bind(this)), on(socket, "data", this.ondata.bind(this)), on(socket, "error", this.onerror.bind(this)), on(socket, "close", this.onclose.bind(this)), on(this.decoder, "decoded", this.ondecoded.bind(this)));
+        }
+        /**
+         * Called upon a ping.
+         *
+         * @private
+         */
+        onping() {
+            this.emitReserved("ping");
+        }
+        /**
+         * Called with data.
+         *
+         * @private
+         */
+        ondata(data) {
+            this.decoder.add(data);
+        }
+        /**
+         * Called when parser fully decodes a packet.
+         *
+         * @private
+         */
+        ondecoded(packet) {
+            this.emitReserved("packet", packet);
+        }
+        /**
+         * Called upon socket error.
+         *
+         * @private
+         */
+        onerror(err) {
+            this.emitReserved("error", err);
+        }
+        /**
+         * Creates a new socket for the given `nsp`.
+         *
+         * @return {Socket}
+         * @public
+         */
+        socket(nsp, opts) {
+            let socket = this.nsps[nsp];
+            if (!socket) {
+                socket = new Socket(this, nsp, opts);
+                this.nsps[nsp] = socket;
+            }
+            return socket;
+        }
+        /**
+         * Called upon a socket close.
+         *
+         * @param socket
+         * @private
+         */
+        _destroy(socket) {
+            const nsps = Object.keys(this.nsps);
+            for (const nsp of nsps) {
+                const socket = this.nsps[nsp];
+                if (socket.active) {
+                    return;
+                }
+            }
+            this._close();
+        }
+        /**
+         * Writes a packet.
+         *
+         * @param packet
+         * @private
+         */
+        _packet(packet) {
+            const encodedPackets = this.encoder.encode(packet);
+            for (let i = 0; i < encodedPackets.length; i++) {
+                this.engine.write(encodedPackets[i], packet.options);
+            }
+        }
+        /**
+         * Clean up transport subscriptions and packet buffer.
+         *
+         * @private
+         */
+        cleanup() {
+            this.subs.forEach((subDestroy) => subDestroy());
+            this.subs.length = 0;
+            this.decoder.destroy();
+        }
+        /**
+         * Close the current socket.
+         *
+         * @private
+         */
+        _close() {
+            this.skipReconnect = true;
+            this._reconnecting = false;
+            if ("opening" === this._readyState) {
+                // `onclose` will not fire because
+                // an open event never happened
+                this.cleanup();
+            }
+            this.backoff.reset();
+            this._readyState = "closed";
+            if (this.engine)
+                this.engine.close();
+        }
+        /**
+         * Alias for close()
+         *
+         * @private
+         */
+        disconnect() {
+            return this._close();
+        }
+        /**
+         * Called upon engine close.
+         *
+         * @private
+         */
+        onclose(reason) {
+            this.cleanup();
+            this.backoff.reset();
+            this._readyState = "closed";
+            this.emitReserved("close", reason);
+            if (this._reconnection && !this.skipReconnect) {
+                this.reconnect();
+            }
+        }
+        /**
+         * Attempt a reconnection.
+         *
+         * @private
+         */
+        reconnect() {
+            if (this._reconnecting || this.skipReconnect)
+                return this;
+            const self = this;
+            if (this.backoff.attempts >= this._reconnectionAttempts) {
+                this.backoff.reset();
+                this.emitReserved("reconnect_failed");
+                this._reconnecting = false;
+            }
+            else {
+                const delay = this.backoff.duration();
+                this._reconnecting = true;
+                const timer = this.setTimeoutFn(() => {
+                    if (self.skipReconnect)
+                        return;
+                    this.emitReserved("reconnect_attempt", self.backoff.attempts);
+                    // check again for the case socket closed in above events
+                    if (self.skipReconnect)
+                        return;
+                    self.open((err) => {
+                        if (err) {
+                            self._reconnecting = false;
+                            self.reconnect();
+                            this.emitReserved("reconnect_error", err);
+                        }
+                        else {
+                            self.onreconnect();
+                        }
+                    });
+                }, delay);
+                if (this.opts.autoUnref) {
+                    timer.unref();
+                }
+                this.subs.push(function subDestroy() {
+                    clearTimeout(timer);
+                });
+            }
+        }
+        /**
+         * Called upon successful reconnect.
+         *
+         * @private
+         */
+        onreconnect() {
+            const attempt = this.backoff.attempts;
+            this._reconnecting = false;
+            this.backoff.reset();
+            this.emitReserved("reconnect", attempt);
+        }
+    }
+
+    /**
+     * Managers cache.
+     */
+    const cache = {};
+    function lookup(uri, opts) {
+        if (typeof uri === "object") {
+            opts = uri;
+            uri = undefined;
+        }
+        opts = opts || {};
+        const parsed = url(uri, opts.path || "/socket.io");
+        const source = parsed.source;
+        const id = parsed.id;
+        const path = parsed.path;
+        const sameNamespace = cache[id] && path in cache[id]["nsps"];
+        const newConnection = opts.forceNew ||
+            opts["force new connection"] ||
+            false === opts.multiplex ||
+            sameNamespace;
+        let io;
+        if (newConnection) {
+            io = new Manager(source, opts);
+        }
+        else {
+            if (!cache[id]) {
+                cache[id] = new Manager(source, opts);
+            }
+            io = cache[id];
+        }
+        if (parsed.query && !opts.query) {
+            opts.query = parsed.queryKey;
+        }
+        return io.socket(parsed.path, opts);
+    }
+    // so that "lookup" can be used both as a function (e.g. `io(...)`) and as a
+    // namespace (e.g. `io.connect(...)`), for backward compatibility
+    Object.assign(lookup, {
+        Manager,
+        Socket,
+        io: lookup,
+        connect: lookup,
+    });
+
+    let SOCKET_URL;
+    {
+        SOCKET_URL = '';
+    }
+    var socket = lookup(SOCKET_URL);
+
+    /* src\components\ModalPseudo.svelte generated by Svelte v3.44.0 */
+
+    const { console: console_1$1 } = globals;
+    const file$1 = "src\\components\\ModalPseudo.svelte";
+
+    // (20:0) <Modal bind:isOpen>
     function create_default_slot$1(ctx) {
-    	let img;
-    	let img_src_value;
+    	let form;
+    	let input;
     	let t0;
-    	let span;
+    	let button;
+    	let mounted;
+    	let dispose;
 
     	const block = {
     		c: function create() {
-    			img = element("img");
+    			form = element("form");
+    			input = element("input");
     			t0 = space();
-    			span = element("span");
-    			span.textContent = "JOIN PARTY";
-    			attr_dev(img, "class", "mode-icon svelte-702isp");
-    			if (!src_url_equal(img.src, img_src_value = "assets/robot.svg")) attr_dev(img, "src", img_src_value);
-    			attr_dev(img, "alt", "");
-    			add_location(img, file, 19, 16, 737);
-    			attr_dev(span, "class", "mode-label svelte-702isp");
-    			add_location(span, file, 20, 16, 810);
+    			button = element("button");
+    			button.textContent = "Submit";
+    			attr_dev(input, "placeholder", "Pseudo");
+    			attr_dev(input, "type", "text");
+    			attr_dev(input, "class", "svelte-jtigkg");
+    			add_location(input, file$1, 21, 8, 605);
+    			attr_dev(button, "class", "svelte-jtigkg");
+    			add_location(button, file$1, 22, 8, 677);
+    			attr_dev(form, "class", "modal-pseudo svelte-jtigkg");
+    			add_location(form, file$1, 20, 4, 528);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, img, anchor);
-    			insert_dev(target, t0, anchor);
-    			insert_dev(target, span, anchor);
+    			insert_dev(target, form, anchor);
+    			append_dev(form, input);
+    			set_input_value(input, /*pseudo*/ ctx[1]);
+    			append_dev(form, t0);
+    			append_dev(form, button);
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(input, "input", /*input_input_handler*/ ctx[3]),
+    					listen_dev(form, "submit", prevent_default(/*handleSubmit*/ ctx[2]), false, true, false)
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*pseudo*/ 2 && input.value !== /*pseudo*/ ctx[1]) {
+    				set_input_value(input, /*pseudo*/ ctx[1]);
+    			}
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(img);
-    			if (detaching) detach_dev(t0);
-    			if (detaching) detach_dev(span);
+    			if (detaching) detach_dev(form);
+    			mounted = false;
+    			run_all(dispose);
     		}
     	};
 
@@ -3387,169 +6614,353 @@ var app = (function () {
     		block,
     		id: create_default_slot$1.name,
     		type: "slot",
-    		source: "(19:12) <Link class=\\\"select-box__item\\\" to=\\\"/join-party\\\">",
+    		source: "(20:0) <Modal bind:isOpen>",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$2(ctx) {
-    	let main;
-    	let h1;
-    	let t1;
-    	let div1;
-    	let h2;
-    	let t3;
-    	let link0;
-    	let t4;
-    	let div0;
-    	let link1;
-    	let t5;
-    	let link2;
-    	let t6;
-    	let link3;
+    function create_fragment$3(ctx) {
+    	let modal;
+    	let updating_isOpen;
     	let current;
 
-    	link0 = new Link$1({
-    			props: {
-    				to: "/game",
-    				$$slots: { default: [create_default_slot_3] },
-    				$$scope: { ctx }
-    			},
-    			$$inline: true
-    		});
+    	function modal_isOpen_binding(value) {
+    		/*modal_isOpen_binding*/ ctx[4](value);
+    	}
 
-    	link1 = new Link$1({
-    			props: {
-    				class: "",
-    				to: "/game/ia",
-    				$$slots: { default: [create_default_slot_2$1] },
-    				$$scope: { ctx }
-    			},
-    			$$inline: true
-    		});
+    	let modal_props = {
+    		$$slots: { default: [create_default_slot$1] },
+    		$$scope: { ctx }
+    	};
 
-    	link2 = new Link$1({
-    			props: {
-    				class: "select-box__item",
-    				to: "/create-party",
-    				$$slots: { default: [create_default_slot_1$1] },
-    				$$scope: { ctx }
-    			},
-    			$$inline: true
-    		});
+    	if (/*isOpen*/ ctx[0] !== void 0) {
+    		modal_props.isOpen = /*isOpen*/ ctx[0];
+    	}
 
-    	link3 = new Link$1({
-    			props: {
-    				class: "select-box__item",
-    				to: "/join-party",
-    				$$slots: { default: [create_default_slot$1] },
-    				$$scope: { ctx }
-    			},
-    			$$inline: true
-    		});
+    	modal = new Modal({ props: modal_props, $$inline: true });
+    	binding_callbacks.push(() => bind(modal, 'isOpen', modal_isOpen_binding));
 
     	const block = {
     		c: function create() {
-    			main = element("main");
-    			h1 = element("h1");
-    			h1.textContent = "CONNECT 4";
-    			t1 = space();
-    			div1 = element("div");
-    			h2 = element("h2");
-    			h2.textContent = "PLAY WITH";
-    			t3 = space();
-    			create_component(link0.$$.fragment);
-    			t4 = space();
-    			div0 = element("div");
-    			create_component(link1.$$.fragment);
-    			t5 = space();
-    			create_component(link2.$$.fragment);
-    			t6 = space();
-    			create_component(link3.$$.fragment);
-    			attr_dev(h1, "class", "svelte-702isp");
-    			add_location(h1, file, 4, 4, 85);
-    			attr_dev(h2, "class", "svelte-702isp");
-    			add_location(h2, file, 7, 8, 149);
-    			attr_dev(div0, "class", "select-box svelte-702isp");
-    			add_location(div0, file, 9, 8, 221);
-    			attr_dev(div1, "class", "mode-selection svelte-702isp");
-    			add_location(div1, file, 6, 4, 111);
-    			attr_dev(main, "class", "svelte-702isp");
-    			add_location(main, file, 3, 0, 73);
+    			create_component(modal.$$.fragment);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, main, anchor);
-    			append_dev(main, h1);
-    			append_dev(main, t1);
-    			append_dev(main, div1);
-    			append_dev(div1, h2);
-    			append_dev(div1, t3);
-    			mount_component(link0, div1, null);
-    			append_dev(div1, t4);
-    			append_dev(div1, div0);
-    			mount_component(link1, div0, null);
-    			append_dev(div0, t5);
-    			mount_component(link2, div0, null);
-    			append_dev(div0, t6);
-    			mount_component(link3, div0, null);
+    			mount_component(modal, target, anchor);
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
-    			const link0_changes = {};
+    			const modal_changes = {};
 
-    			if (dirty & /*$$scope*/ 1) {
-    				link0_changes.$$scope = { dirty, ctx };
+    			if (dirty & /*$$scope, pseudo*/ 34) {
+    				modal_changes.$$scope = { dirty, ctx };
     			}
 
-    			link0.$set(link0_changes);
-    			const link1_changes = {};
-
-    			if (dirty & /*$$scope*/ 1) {
-    				link1_changes.$$scope = { dirty, ctx };
+    			if (!updating_isOpen && dirty & /*isOpen*/ 1) {
+    				updating_isOpen = true;
+    				modal_changes.isOpen = /*isOpen*/ ctx[0];
+    				add_flush_callback(() => updating_isOpen = false);
     			}
 
-    			link1.$set(link1_changes);
-    			const link2_changes = {};
-
-    			if (dirty & /*$$scope*/ 1) {
-    				link2_changes.$$scope = { dirty, ctx };
-    			}
-
-    			link2.$set(link2_changes);
-    			const link3_changes = {};
-
-    			if (dirty & /*$$scope*/ 1) {
-    				link3_changes.$$scope = { dirty, ctx };
-    			}
-
-    			link3.$set(link3_changes);
+    			modal.$set(modal_changes);
     		},
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(link0.$$.fragment, local);
-    			transition_in(link1.$$.fragment, local);
-    			transition_in(link2.$$.fragment, local);
-    			transition_in(link3.$$.fragment, local);
+    			transition_in(modal.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
-    			transition_out(link0.$$.fragment, local);
-    			transition_out(link1.$$.fragment, local);
-    			transition_out(link2.$$.fragment, local);
-    			transition_out(link3.$$.fragment, local);
+    			transition_out(modal.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
+    			destroy_component(modal, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$3.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$3($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots('ModalPseudo', slots, []);
+    	let { isOpen = false } = $$props;
+    	let pseudo = '';
+
+    	const handleSubmit = () => {
+    		if (!pseudo) {
+    			console.log('pseudo empty');
+    			return;
+    		}
+
+    		// socket.on('')
+    		socket.emit('send pseudo', { pseudo });
+    	}; // socket.io.emit('sendpseudo', {});
+
+    	socket.on('send pseudo', ({ pseudo }) => {
+    		console.log('socket on pseudo : ', pseudo);
+    	});
+
+    	const writable_props = ['isOpen'];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1$1.warn(`<ModalPseudo> was created with unknown prop '${key}'`);
+    	});
+
+    	function input_input_handler() {
+    		pseudo = this.value;
+    		$$invalidate(1, pseudo);
+    	}
+
+    	function modal_isOpen_binding(value) {
+    		isOpen = value;
+    		$$invalidate(0, isOpen);
+    	}
+
+    	$$self.$$set = $$props => {
+    		if ('isOpen' in $$props) $$invalidate(0, isOpen = $$props.isOpen);
+    	};
+
+    	$$self.$capture_state = () => ({
+    		Modal,
+    		socket,
+    		isOpen,
+    		pseudo,
+    		handleSubmit
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('isOpen' in $$props) $$invalidate(0, isOpen = $$props.isOpen);
+    		if ('pseudo' in $$props) $$invalidate(1, pseudo = $$props.pseudo);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [isOpen, pseudo, handleSubmit, input_input_handler, modal_isOpen_binding];
+    }
+
+    class ModalPseudo extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init$1(this, options, instance$3, create_fragment$3, safe_not_equal, { isOpen: 0 });
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "ModalPseudo",
+    			options,
+    			id: create_fragment$3.name
+    		});
+    	}
+
+    	get isOpen() {
+    		throw new Error("<ModalPseudo>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+
+    	set isOpen(value) {
+    		throw new Error("<ModalPseudo>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
+    	}
+    }
+
+    /* src\pages\Home.svelte generated by Svelte v3.44.0 */
+
+    const { console: console_1 } = globals;
+    const file = "src\\pages\\Home.svelte";
+
+    function create_fragment$2(ctx) {
+    	let modalpseudo;
+    	let updating_isOpen;
+    	let t0;
+    	let main;
+    	let h1;
+    	let t2;
+    	let div1;
+    	let h2;
+    	let t4;
+    	let div0;
+    	let a0;
+    	let img0;
+    	let img0_src_value;
+    	let t5;
+    	let span0;
+    	let t7;
+    	let a1;
+    	let img1;
+    	let img1_src_value;
+    	let t8;
+    	let span1;
+    	let t10;
+    	let a2;
+    	let img2;
+    	let img2_src_value;
+    	let t11;
+    	let span2;
+    	let current;
+    	let mounted;
+    	let dispose;
+
+    	function modalpseudo_isOpen_binding(value) {
+    		/*modalpseudo_isOpen_binding*/ ctx[2](value);
+    	}
+
+    	let modalpseudo_props = {};
+
+    	if (/*isOpen*/ ctx[0] !== void 0) {
+    		modalpseudo_props.isOpen = /*isOpen*/ ctx[0];
+    	}
+
+    	modalpseudo = new ModalPseudo({ props: modalpseudo_props, $$inline: true });
+    	binding_callbacks.push(() => bind(modalpseudo, 'isOpen', modalpseudo_isOpen_binding));
+
+    	const block = {
+    		c: function create() {
+    			create_component(modalpseudo.$$.fragment);
+    			t0 = space();
+    			main = element("main");
+    			h1 = element("h1");
+    			h1.textContent = "CONNECT 4";
+    			t2 = space();
+    			div1 = element("div");
+    			h2 = element("h2");
+    			h2.textContent = "PLAY WITH";
+    			t4 = space();
+    			div0 = element("div");
+    			a0 = element("a");
+    			img0 = element("img");
+    			t5 = space();
+    			span0 = element("span");
+    			span0.textContent = "ROBOT";
+    			t7 = space();
+    			a1 = element("a");
+    			img1 = element("img");
+    			t8 = space();
+    			span1 = element("span");
+    			span1.textContent = "CREATE PARTY";
+    			t10 = space();
+    			a2 = element("a");
+    			img2 = element("img");
+    			t11 = space();
+    			span2 = element("span");
+    			span2.textContent = "JOIN PARTY";
+    			attr_dev(h1, "class", "svelte-1csqo4t");
+    			add_location(h1, file, 21, 4, 509);
+    			attr_dev(h2, "class", "svelte-1csqo4t");
+    			add_location(h2, file, 24, 8, 573);
+    			attr_dev(img0, "class", "mode-icon svelte-1csqo4t");
+    			if (!src_url_equal(img0.src, img0_src_value = "assets/robot.svg")) attr_dev(img0, "src", img0_src_value);
+    			attr_dev(img0, "alt", "");
+    			add_location(img0, file, 27, 16, 734);
+    			attr_dev(span0, "class", "mode-label svelte-1csqo4t");
+    			add_location(span0, file, 28, 16, 807);
+    			attr_dev(a0, "class", "select-box__item svelte-1csqo4t");
+    			attr_dev(a0, "href", "/game");
+    			add_location(a0, file, 26, 12, 639);
+    			attr_dev(img1, "class", "mode-icon svelte-1csqo4t");
+    			if (!src_url_equal(img1.src, img1_src_value = "assets/robot.svg")) attr_dev(img1, "src", img1_src_value);
+    			attr_dev(img1, "alt", "");
+    			add_location(img1, file, 31, 16, 979);
+    			attr_dev(span1, "class", "mode-label svelte-1csqo4t");
+    			add_location(span1, file, 32, 16, 1052);
+    			attr_dev(a1, "class", "select-box__item svelte-1csqo4t");
+    			attr_dev(a1, "href", "/create-party");
+    			add_location(a1, file, 30, 12, 876);
+    			attr_dev(img2, "class", "mode-icon svelte-1csqo4t");
+    			if (!src_url_equal(img2.src, img2_src_value = "assets/robot.svg")) attr_dev(img2, "src", img2_src_value);
+    			attr_dev(img2, "alt", "");
+    			add_location(img2, file, 35, 16, 1229);
+    			attr_dev(span2, "class", "mode-label svelte-1csqo4t");
+    			add_location(span2, file, 36, 16, 1302);
+    			attr_dev(a2, "class", "select-box__item svelte-1csqo4t");
+    			attr_dev(a2, "href", "/join-party");
+    			add_location(a2, file, 34, 12, 1128);
+    			attr_dev(div0, "class", "select-box svelte-1csqo4t");
+    			add_location(div0, file, 25, 8, 601);
+    			attr_dev(div1, "class", "mode-selection svelte-1csqo4t");
+    			add_location(div1, file, 23, 4, 535);
+    			attr_dev(main, "class", "svelte-1csqo4t");
+    			add_location(main, file, 20, 0, 497);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(modalpseudo, target, anchor);
+    			insert_dev(target, t0, anchor);
+    			insert_dev(target, main, anchor);
+    			append_dev(main, h1);
+    			append_dev(main, t2);
+    			append_dev(main, div1);
+    			append_dev(div1, h2);
+    			append_dev(div1, t4);
+    			append_dev(div1, div0);
+    			append_dev(div0, a0);
+    			append_dev(a0, img0);
+    			append_dev(a0, t5);
+    			append_dev(a0, span0);
+    			append_dev(div0, t7);
+    			append_dev(div0, a1);
+    			append_dev(a1, img1);
+    			append_dev(a1, t8);
+    			append_dev(a1, span1);
+    			append_dev(div0, t10);
+    			append_dev(div0, a2);
+    			append_dev(a2, img2);
+    			append_dev(a2, t11);
+    			append_dev(a2, span2);
+    			current = true;
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(a0, "click", /*handleClickMode*/ ctx[1], false, false, false),
+    					action_destroyer(link.call(null, a0)),
+    					listen_dev(a1, "click", /*handleClickMode*/ ctx[1], false, false, false),
+    					action_destroyer(link.call(null, a1)),
+    					listen_dev(a2, "click", /*handleClickMode*/ ctx[1], false, false, false),
+    					action_destroyer(link.call(null, a2))
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, [dirty]) {
+    			const modalpseudo_changes = {};
+
+    			if (!updating_isOpen && dirty & /*isOpen*/ 1) {
+    				updating_isOpen = true;
+    				modalpseudo_changes.isOpen = /*isOpen*/ ctx[0];
+    				add_flush_callback(() => updating_isOpen = false);
+    			}
+
+    			modalpseudo.$set(modalpseudo_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(modalpseudo.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(modalpseudo.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(modalpseudo, detaching);
+    			if (detaching) detach_dev(t0);
     			if (detaching) detach_dev(main);
-    			destroy_component(link0);
-    			destroy_component(link1);
-    			destroy_component(link2);
-    			destroy_component(link3);
+    			mounted = false;
+    			run_all(dispose);
     		}
     	};
 
@@ -3567,20 +6978,56 @@ var app = (function () {
     function instance$2($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Home', slots, []);
+    	const SESSION_COOKIE = api.get('SESSION');
+    	let isOpen = false;
+    	console.log(SESSION_COOKIE);
+
+    	const handleClickMode = e => {
+    		if (!SESSION_COOKIE) {
+    			$$invalidate(0, isOpen = true);
+    			e.preventDefault();
+    		} else {
+    			$$invalidate(0, isOpen = false);
+    		}
+    	};
+
+    	const test = document.cookie;
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Home> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<Home> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ Link: Link$1 });
-    	return [];
+    	function modalpseudo_isOpen_binding(value) {
+    		isOpen = value;
+    		$$invalidate(0, isOpen);
+    	}
+
+    	$$self.$capture_state = () => ({
+    		link,
+    		Cookie: api,
+    		ModalPseudo,
+    		SESSION_COOKIE,
+    		isOpen,
+    		handleClickMode,
+    		test
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('isOpen' in $$props) $$invalidate(0, isOpen = $$props.isOpen);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [isOpen, handleClickMode, modalpseudo_isOpen_binding];
     }
 
     class Home extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$2, create_fragment$2, safe_not_equal, {});
+    		init$1(this, options, instance$2, create_fragment$2, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -3826,7 +7273,7 @@ var app = (function () {
     class Router_1 extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$1, create_fragment$1, safe_not_equal, {});
+    		init$1(this, options, instance$1, create_fragment$1, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
@@ -3897,7 +7344,7 @@ var app = (function () {
     class App extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance, create_fragment, safe_not_equal, {});
+    		init$1(this, options, instance, create_fragment, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,

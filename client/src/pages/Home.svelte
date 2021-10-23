@@ -1,26 +1,44 @@
 <script lang="ts">
-    import { Link } from 'svelte-navigator';
+    import { link } from 'svelte-navigator';
+    import Cookie from 'js-cookie';
+    import ModalPseudo from '../components/ModalPseudo.svelte';
+
+    const SESSION_COOKIE = Cookie.get('SESSION');
+    let isOpen = false;
+    console.log(SESSION_COOKIE);
+
+    const handleClickMode = (e) => {
+        if (!SESSION_COOKIE) {
+            isOpen = true;
+            e.preventDefault();
+        } else {
+            isOpen = false;
+        }
+    };
+
+    const test = document.cookie;
 </script>
+
+<ModalPseudo bind:isOpen />
 
 <main>
     <h1>CONNECT 4</h1>
 
     <div class="mode-selection">
         <h2>PLAY WITH</h2>
-        <Link to="/game">to gameeee</Link>
         <div class="select-box">
-            <Link class="" to="/game/ia">
+            <a class="select-box__item" on:click={handleClickMode} href="/game" use:link>
                 <img class="mode-icon" src="assets/robot.svg" alt="" />
                 <span class="mode-label">ROBOT</span>
-            </Link>
-            <Link class="select-box__item" to="/create-party">
+            </a>
+            <a class="select-box__item" on:click={handleClickMode} href="/create-party" use:link>
                 <img class="mode-icon" src="assets/robot.svg" alt="" />
                 <span class="mode-label">CREATE PARTY</span>
-            </Link>
-            <Link class="select-box__item" to="/join-party">
+            </a>
+            <a class="select-box__item" on:click={handleClickMode} href="/join-party" use:link>
                 <img class="mode-icon" src="assets/robot.svg" alt="" />
                 <span class="mode-label">JOIN PARTY</span>
-            </Link>
+            </a>
         </div>
     </div>
 </main>
@@ -72,7 +90,7 @@
         height: 100%;
     }
 
-    .select-box > :global(a) {
+    .select-box__item {
         height: 120px;
         width: 28%;
         border: 1px solid var(--primary);

@@ -25,30 +25,46 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path = __importStar(require("path"));
+const cors_1 = __importDefault(require("cors"));
+const socket_io_1 = require("socket.io");
+const http_1 = __importDefault(require("http"));
 dotenv_1.default.config({ path: path.join(__dirname, '..', 'config', '.env.local') });
 require("./database/database");
+const socket_handler_1 = __importDefault(require("./socketHandler/socket.handler"));
+// TODO Automatiser Heroku
+// TODO Mettre une NODE_ENV a development et NODE_ENV en production sur heroku (il le fait deja de base ?)
 // TODO Changer la db utilisé
 // TODO Changer la db utilisé
 // TODO Changer la db utilisé
-const ON_PRODUCTION = true;
+// TODO Apres entré du pseudo stocker generer un token qui va être stocké en base de données et associé au pseudo
+// TODO Puis stocker le token dans les cookies
+// TODO Tout ça en socket io
 const server = express_1.default();
+const httpServer = new http_1.default.Server(server);
+const io = new socket_io_1.Server(httpServer, {
+    cors: {
+        origin: '*',
+        credentials: true,
+    },
+});
 const PORT = process.env.PORT || 8000;
-// const PORT = 5000;
 server.use(express_1.default.json());
 // server.use(cors({ origin: process.env.ORIGIN, credentials: true }));
-// server.use(cors({ origin: '*', credentials: true }));
+server.use(cors_1.default({ origin: '*', credentials: true }));
 server.use(express_1.default.urlencoded({ extended: true }));
-// server.get('/toto', (req, res) => {
-//     res.send({
-//         toto: 'ezez',
-//     });
-// });
-if (ON_PRODUCTION) {
+if (process.env.NODE_ENV === 'production') {
     server.use(express_1.default.static(path.join(__dirname, '..', 'client', 'public')));
     server.get('*', (req, res) => {
         res.sendFile(path.join(__dirname, '..', 'client', 'public', 'index.html'));
     });
 }
-server.listen(PORT, () => {
+io.on('connection', (socket) => {
+    socket_handler_1.default(io, socket);
+    socket.on('disconnect', () => {
+        console.log('socket disconnected');
+    });
+    console.log('socket connected');
+});
+httpServer.listen(PORT, () => {
     console.log(`listen on port ${PORT}`);
 });
