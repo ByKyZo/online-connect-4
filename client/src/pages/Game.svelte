@@ -13,6 +13,7 @@
     // TODO Plus verifier la position valide en back
     // TODO Empecher de jouer en back si on spam une touche
     // TODO Ajouter le jeton en temps reel pour le joueur qui le pose
+    // TODO Faire la modal de gagnant
 
     let isWin = false;
 

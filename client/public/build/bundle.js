@@ -7213,29 +7213,29 @@ var app = (function () {
     			t13 = space();
     			span5 = element("span");
     			t14 = text(t14_value);
-    			add_location(h1, file$3, 48, 0, 1473);
+    			add_location(h1, file$3, 49, 0, 1508);
     			attr_dev(div0, "class", "grid svelte-127pg6");
-    			add_location(div0, file$3, 53, 4, 1555);
+    			add_location(div0, file$3, 54, 4, 1590);
     			attr_dev(span0, "class", "player-info-name");
-    			add_location(span0, file$3, 58, 12, 1713);
+    			add_location(span0, file$3, 59, 12, 1748);
     			attr_dev(span1, "class", "player-info-score");
-    			add_location(span1, file$3, 59, 12, 1788);
+    			add_location(span1, file$3, 60, 12, 1823);
     			attr_dev(div1, "class", "player1-info display-part svelte-127pg6");
-    			add_location(div1, file$3, 57, 8, 1660);
-    			add_location(span2, file$3, 62, 12, 1930);
-    			add_location(span3, file$3, 63, 12, 1964);
+    			add_location(div1, file$3, 58, 8, 1695);
+    			add_location(span2, file$3, 63, 12, 1965);
+    			add_location(span3, file$3, 64, 12, 1999);
     			attr_dev(div2, "class", "current-player display-part svelte-127pg6");
-    			add_location(div2, file$3, 61, 8, 1875);
+    			add_location(div2, file$3, 62, 8, 1910);
     			attr_dev(span4, "class", "player-info-name");
-    			add_location(span4, file$3, 66, 12, 2059);
+    			add_location(span4, file$3, 67, 12, 2094);
     			attr_dev(span5, "class", "player-info-score");
-    			add_location(span5, file$3, 67, 12, 2135);
+    			add_location(span5, file$3, 68, 12, 2170);
     			attr_dev(div3, "class", "player1-info display-part svelte-127pg6");
-    			add_location(div3, file$3, 65, 8, 2006);
+    			add_location(div3, file$3, 66, 8, 2041);
     			attr_dev(div4, "class", "display svelte-127pg6");
-    			add_location(div4, file$3, 56, 4, 1629);
+    			add_location(div4, file$3, 57, 4, 1664);
     			attr_dev(main, "class", "svelte-127pg6");
-    			add_location(main, file$3, 50, 0, 1490);
+    			add_location(main, file$3, 51, 0, 1525);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -7334,6 +7334,7 @@ var app = (function () {
     	// TODO Plus verifier la position valide en back
     	// TODO Empecher de jouer en back si on spam une touche
     	// TODO Ajouter le jeton en temps reel pour le joueur qui le pose
+    	// TODO Faire la modal de gagnant
     	let isWin = false;
 
     	let gridEl;
