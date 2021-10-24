@@ -30,7 +30,8 @@ const socket_io_1 = require("socket.io");
 const http_1 = __importDefault(require("http"));
 dotenv_1.default.config({ path: path.join(__dirname, '..', 'config', '.env.local') });
 require("./database/database");
-const socket_handler_1 = __importDefault(require("./socketHandler/socket.handler"));
+const party_socket_1 = __importDefault(require("./socketHandler/party.socket"));
+const user_socket_1 = __importDefault(require("./socketHandler/user.socket"));
 // TODO Automatiser Heroku
 // TODO Mettre une NODE_ENV a development et NODE_ENV en production sur heroku (il le fait deja de base ?)
 // TODO Changer la db utilisé
@@ -59,7 +60,8 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 io.on('connection', (socket) => {
-    socket_handler_1.default(io, socket);
+    party_socket_1.default(io, socket);
+    user_socket_1.default(io, socket);
     socket.on('disconnect', () => {
         console.log('socket disconnected');
     });

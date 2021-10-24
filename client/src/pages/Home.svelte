@@ -1,22 +1,20 @@
 <script lang="ts">
     import { link } from 'svelte-navigator';
-    import Cookie from 'js-cookie';
+    import { user } from '../store/user.store';
     import ModalPseudo from '../components/ModalPseudo.svelte';
+    import { get } from 'svelte/store';
+    const { isConnected } = user;
 
-    const SESSION_COOKIE = Cookie.get('SESSION');
     let isOpen = false;
-    console.log(SESSION_COOKIE);
 
     const handleClickMode = (e) => {
-        if (!SESSION_COOKIE) {
+        if (!get(isConnected)) {
             isOpen = true;
             e.preventDefault();
         } else {
             isOpen = false;
         }
     };
-
-    const test = document.cookie;
 </script>
 
 <ModalPseudo bind:isOpen />
@@ -27,10 +25,10 @@
     <div class="mode-selection">
         <h2>PLAY WITH</h2>
         <div class="select-box">
-            <a class="select-box__item" on:click={handleClickMode} href="/game" use:link>
+            <!-- <a class="select-box__item" on:click={handleClickMode} href="/game" use:link>
                 <img class="mode-icon" src="assets/robot.svg" alt="" />
                 <span class="mode-label">ROBOT</span>
-            </a>
+            </a> -->
             <a class="select-box__item" on:click={handleClickMode} href="/create-party" use:link>
                 <img class="mode-icon" src="assets/robot.svg" alt="" />
                 <span class="mode-label">CREATE PARTY</span>
@@ -44,12 +42,6 @@
 </main>
 
 <style>
-    main {
-        background-color: var(--background);
-        min-height: 100vh;
-        width: 100vw;
-    }
-
     h1 {
         color: var(--white);
         position: fixed;

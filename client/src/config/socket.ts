@@ -1,6 +1,6 @@
 import io from 'socket.io-client';
 
-const ON_PRODUCTION = true;
+const ON_PRODUCTION = false;
 
 let SOCKET_URL;
 

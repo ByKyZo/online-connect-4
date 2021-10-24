@@ -1,7 +1,7 @@
 <script lang="ts">
-    import Cookie from 'js-cookie';
     import Modal from './widgets/Modal.svelte';
-    import socket from '../api/socket';
+    import { user } from '../store/user.store';
+    import socket from '../config/socket';
     export let isOpen = false;
 
     let pseudo = '';
@@ -11,13 +11,12 @@
             console.log('pseudo empty');
             return;
         }
-        // socket.on('')
-        socket.emit('send pseudo', { pseudo });
-        // socket.io.emit('sendpseudo', {});
+        socket.emit('create session', { pseudo });
     };
 
-    socket.on('send pseudo', ({ pseudo }) => {
-        console.log('socket on pseudo : ', pseudo);
+    socket.on('create session', ({ pseudo, token }) => {
+        isOpen = false;
+        user.createSession(token, pseudo);
     });
 </script>
 

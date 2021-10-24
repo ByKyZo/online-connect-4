@@ -7,10 +7,7 @@
 {#if isOpen}
     <div class="overlay">
         <div class={`modal ${clazz || ''}`}>
-            <!-- <div class={$$.props.class}> -->
-            <!-- <div class={`${clazz || ''}`}> -->
             <slot />
-            <!-- </div> -->
         </div>
     </div>
 {/if}

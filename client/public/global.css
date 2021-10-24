@@ -12,10 +12,19 @@
     --background: #424242;
 
     --text-font: 'Staatliches', cursive;
-    /* --number-font: 'Staatliches', cursive; */
 }
 
 html,
 button {
     font-family: var(--text-font);
+}
+
+h1 {
+    outline: none;
+}
+
+body {
+    background: var(--background);
+    min-height: 100vh;
+    width: 100vw;
 }

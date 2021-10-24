@@ -6,7 +6,8 @@ import { Server } from 'socket.io';
 import http from 'http';
 dotenv.config({ path: path.join(__dirname, '..', 'config', '.env.local') });
 import './database/database';
-import socketHandler from './socketHandler/socket.handler';
+import partySocket from './socketHandler/party.socket';
+import userSocket from './socketHandler/user.socket';
 
 // TODO Automatiser Heroku
 // TODO Mettre une NODE_ENV a development et NODE_ENV en production sur heroku (il le fait deja de base ?)
@@ -42,7 +43,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 io.on('connection', (socket) => {
-    socketHandler(io, socket);
+    partySocket(io, socket);
+    userSocket(io, socket);
     socket.on('disconnect', () => {
         console.log('socket disconnected');
     });
