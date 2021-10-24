@@ -11,6 +11,9 @@
 
     // TODO Refactoriser proprement !
     // TODO Plus verifier la position valide en back
+    // TODO Empecher de jouer en back si on spam une touche
+    // TODO Ajouter le jeton en temps reel pour le joueur qui le pose
+
     let isWin = false;
 
     let gridEl;
