@@ -16,6 +16,11 @@
     // TODO Faire la modal de gagnant
 
     let isWin = false;
+    let winnerState = {
+        winnerID: '',
+        winnerPseudo: '',
+        coinPost: [],
+    };
 
     let gridEl;
     let game: Game;
@@ -40,6 +45,14 @@
         console.log(winner);
         if (winner) {
             isWin = true;
+            winnerState = winner;
+
+            if ($host.hostID === winner.winnerID) {
+                party.incScore(host);
+            } else if ($guest.guestID === winner.winnerID) {
+                party.incScore(guest);
+            }
+            party.log();
         }
 
         // TODO A voir pour mettre le old player en parametre
@@ -58,7 +71,8 @@
     }
 </script>
 
-<ModalWinner bind:isOpen={isWin} />
+<!-- <ModalWinner bind:isOpen={isWin} /> -->
+<ModalWinner bind:isOpen={isWin} winnerPseudo={winnerState.winnerPseudo} />
 
 <h1>Game</h1>
 

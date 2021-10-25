@@ -59,8 +59,17 @@ class PartyStore {
         console.log('PARTY START');
     }
 
+    public restartParty() {}
+
     public removeParty(partyID) {
         socket.emit('remove party', partyID);
+    }
+
+    public incScore(player: Writable<IHost | IGuest>) {
+        player.update((p) => {
+            p.score++;
+            return p;
+        });
     }
 
     public log() {

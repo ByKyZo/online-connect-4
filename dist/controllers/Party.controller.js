@@ -23,6 +23,7 @@ class PartyController {
                 currentPlayer: {
                     currentPlayerID: hostID,
                     char: 'O',
+                    pseudo: hostPseudo,
                 },
                 host: {
                     hostID,
@@ -58,14 +59,17 @@ class PartyController {
             let currentPlayer = {
                 currentPlayerID: '',
                 char: '',
+                pseudo: '',
             };
             if (party.currentPlayer.currentPlayerID === party.host.hostID) {
                 currentPlayer.currentPlayerID = party.guest.guestID;
                 currentPlayer.char = party.guest.char;
+                currentPlayer.pseudo = party.guest.pseudo;
             }
             else {
                 currentPlayer.currentPlayerID = party.host.hostID;
                 currentPlayer.char = party.host.char;
+                currentPlayer.pseudo = party.host.pseudo;
             }
             return yield PartyModel_1.default.findByIdAndUpdate(party._id, {
                 $set: { currentPlayer },
@@ -91,6 +95,7 @@ class PartyController {
             if (winnerCoinPos) {
                 winner = {
                     winnerID: oldPlayer.currentPlayerID,
+                    winnerPseudo: oldPlayer.pseudo,
                     coinPos: winnerCoinPos,
                 };
             }

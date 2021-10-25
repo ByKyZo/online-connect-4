@@ -40,6 +40,10 @@ const PartySchema = new Mongoose.Schema({
             type: String,
             required: true,
         },
+        pseudo: {
+            type: String,
+            required: true,
+        },
     },
     host: {
         hostID: {
