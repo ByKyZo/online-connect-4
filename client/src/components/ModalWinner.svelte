@@ -1,14 +1,16 @@
 <script lang="ts">
     import socket from '../config/socket';
     import { party } from '../store/party.store';
+    import { user } from '../store/user.store';
     import Modal from './widgets/Modal.svelte';
-    const { _id } = party;
+    const { _id: partyID } = party;
+    const { _id: userID } = user;
 
     export let isOpen = false;
     export let winnerPseudo = '';
 
     const handleRestart = () => {
-        socket.emit('restart party', { partyID: _id });
+        socket.emit('want restart party', { partyID: $partyID, userID: $userID });
     };
 </script>
 

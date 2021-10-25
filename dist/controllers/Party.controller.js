@@ -41,12 +41,26 @@ class PartyController {
             return parties;
         });
     }
+    static getParty(partyID) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield PartyModel_1.default.findById(partyID);
+        });
+    }
+    static restartParty(partyID) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const game_grid = Game_1.default.drawGrid(7, 6);
+            yield PartyModel_1.default.findByIdAndUpdate(partyID, {
+                $set: { game_grid },
+            }, { new: true });
+            return game_grid;
+        });
+    }
     static joinParty(partyID, guestID, guestPseudo) {
         return __awaiter(this, void 0, void 0, function* () {
             const party = yield PartyModel_1.default.findByIdAndUpdate(partyID, {
                 $set: {
                     guest: { guestID: guestID, score: 0, pseudo: guestPseudo, char: 'X' },
-                    // hasBegun: true,
+                    hasBegun: true,
                 },
             }, {
                 new: true,

@@ -28,13 +28,31 @@ export default class PartyController {
         return parties;
     }
 
+    static async getParty(partyID: string) {
+        return await PartyModel.findById(partyID);
+    }
+
+    static async restartParty(partyID: string) {
+        const game_grid = Game.drawGrid(7, 6);
+
+        await PartyModel.findByIdAndUpdate(
+            partyID,
+            {
+                $set: { game_grid },
+            },
+            { new: true }
+        );
+
+        return game_grid;
+    }
+
     static async joinParty(partyID: string, guestID: string, guestPseudo: string) {
         const party = await PartyModel.findByIdAndUpdate(
             partyID,
             {
                 $set: {
                     guest: { guestID: guestID, score: 0, pseudo: guestPseudo, char: 'X' },
-                    // hasBegun: true,
+                    hasBegun: true,
                 },
             },
             {

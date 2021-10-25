@@ -6,8 +6,12 @@
     import Game from '../game/Game';
     import { party } from '../store/party.store';
     import { user } from '../store/user.store';
-    const { host, guest, currentPlayer, game_grid, isExisting } = party;
+    const { _id: partyID, host, guest, currentPlayer, game_grid, isExisting } = party;
     const { _id: userID } = user;
+
+    // TODO Voir pourquoi le $host.hostID est undefined
+    // TODO Voir pourquoi le $host.hostID est undefined
+    // TODO Voir pourquoi le $host.hostID est undefined
 
     // TODO Refactoriser proprement !
     // TODO Plus verifier la position valide en back
@@ -37,34 +41,60 @@
     socket.on('play coin', (data) => {
         const { coinPos, oldPlayer, updatedPlayer, winner } = data;
 
-        game_grid.update((old) => {
-            old[coinPos.row][coinPos.col] = oldPlayer.char;
-            return old;
-        });
+        if (oldPlayer.currentPlayerID === $userID || updatedPlayer.currentPlayerID === $userID) {
+            game_grid.update((old) => {
+                old[coinPos.row][coinPos.col] = oldPlayer.char;
+                return old;
+            });
 
-        console.log(winner);
-        if (winner) {
-            isWin = true;
-            winnerState = winner;
+            // $: console.log('HOST ID UNDEFIND : ', $host);
+            console.log(winner);
+            // if (winner && $host) {
+            if (winner) {
+                isWin = true;
+                winnerState = winner;
 
-            if ($host.hostID === winner.winnerID) {
-                party.incScore(host);
-            } else if ($guest.guestID === winner.winnerID) {
-                party.incScore(guest);
+                if ($host.hostID === winner.winnerID) {
+                    party.incScore(host);
+                } else if ($guest.guestID === winner.winnerID) {
+                    party.incScore(guest);
+                }
+                party.log();
             }
-            party.log();
+
+            // TODO A voir pour mettre le old player en parametre
+            $: game && game.onPlay(coinPos.row, coinPos.col);
+
+            currentPlayer.set(updatedPlayer);
+        }
+    });
+
+    socket.on('want restart party', ({ party: currentParty, userID: userIDWantRestart }) => {
+        if (currentParty.host.hostID === $userID || currentParty.guest.guestID === $userID) {
+            party.wantRestartParty(userIDWantRestart);
         }
 
-        // TODO A voir pour mettre le old player en parametre
-        $: game && game.onPlay(coinPos.row, coinPos.col);
+        if (party.isPartyRestart()) {
+            // party.emitRestarParty();
+            socket.emit('restart party', { partyID: $partyID });
+        }
+    });
 
-        currentPlayer.set(updatedPlayer);
+    socket.on('restart party', ({ party: currentParty, new_game_grid }) => {
+        if (currentParty.host.hostID === $userID || currentParty.guest.guestID === $userID) {
+            console.log('SOCKET ON RESTART PARTY !!!');
+            // TODO Verifier si c'est les ID des joueurs de la partie
+            party.onRestarParty(new_game_grid);
+            game = new Game(gridEl, $game_grid);
+            game.drawGrid();
+            game.eventListenerHandler();
+            isWin = false;
+        }
     });
 
     $: {
         if (game) {
             console.log('update $ game');
-
             game.drawGrid();
             game.eventListenerHandler();
         }

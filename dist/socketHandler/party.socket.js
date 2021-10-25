@@ -25,10 +25,21 @@ exports.default = (io, socket) => {
     }));
     socket.on('join party', ({ partyID, guestID, guestPseudo }) => __awaiter(void 0, void 0, void 0, function* () {
         const party = yield Party_controller_1.default.joinParty(partyID, guestID, guestPseudo);
+        const parties = yield Party_controller_1.default.getParties();
         io.emit('join party', party);
+        io.emit('get parties', parties);
     }));
     socket.on('play coin', ({ partyID, coinPos }) => __awaiter(void 0, void 0, void 0, function* () {
         const { oldPlayer, updatedPlayer, winner } = yield Party_controller_1.default.play(partyID, coinPos);
         io.emit('play coin', { partyID, coinPos, oldPlayer, updatedPlayer, winner });
+    }));
+    socket.on('want restart party', ({ partyID, userID }) => __awaiter(void 0, void 0, void 0, function* () {
+        const party = yield Party_controller_1.default.getParty(partyID);
+        io.emit('want restart party', { party, userID });
+    }));
+    socket.on('restart party', ({ partyID }) => __awaiter(void 0, void 0, void 0, function* () {
+        const new_game_grid = yield Party_controller_1.default.restartParty(partyID);
+        const party = yield Party_controller_1.default.getParty(partyID);
+        io.emit('restart party', { party, new_game_grid });
     }));
 };

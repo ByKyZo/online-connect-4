@@ -20,6 +20,10 @@ interface ICurrentPlayer {
     currentPlayerID: string;
     char: string;
 }
+interface ICurrentPlayer {
+    currentPlayerID: string;
+    char: string;
+}
 
 class PartyStore {
     public _id: Writable<string> = writable('');
@@ -29,6 +33,7 @@ class PartyStore {
     public guest: Writable<IGuest> = writable();
     public currentPlayer: Writable<ICurrentPlayer> = writable();
     public game_grid: Writable<string[][]> = writable();
+    public userWantRestart: Writable<string[]> = writable([]);
     public isExisting: Writable<boolean> = writable(false);
 
     public createParty(partyID, partyName) {
@@ -59,7 +64,28 @@ class PartyStore {
         console.log('PARTY START');
     }
 
-    public restartParty() {}
+    public wantRestartParty(userID: string) {
+        if (get(this.userWantRestart).length >= 2) return;
+        this.userWantRestart.update((old) => {
+            return [...old, userID];
+        });
+        console.log('USER WANT RESTART', get(this.userWantRestart));
+    }
+
+    public isPartyRestart() {
+        return get(this.userWantRestart).length >= 2;
+    }
+
+    public emitRestarParty() {
+        if (this.isPartyRestart()) {
+            socket.emit('restart party', { partyID: get(this._id) });
+        }
+    }
+
+    public onRestarParty(new_game_grid: string[][]) {
+        this.userWantRestart.set([]);
+        this.game_grid.set(new_game_grid);
+    }
 
     public removeParty(partyID) {
         socket.emit('remove party', partyID);

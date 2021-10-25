@@ -54,6 +54,9 @@ export default class Game {
     }
 
     updatePlayerClass() {
+        // if (get(party.host).hostID === get(party.currentPlayer).currentPlayerID){
+        // } else {
+        // }
         return get(party.currentPlayer).char === 'O' ? 'player1' : 'player2';
     }
 
