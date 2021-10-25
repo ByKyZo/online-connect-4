@@ -4011,7 +4011,7 @@ var app = (function () {
 
     let SOCKET_URL;
     {
-        SOCKET_URL = 'http://localhost:8000';
+        SOCKET_URL = '';
     }
     var socket = lookup(SOCKET_URL);
 
